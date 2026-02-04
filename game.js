@@ -769,12 +769,27 @@
           `<p>Notiz: alte Tradition, schlecht erklärt – und jemand hat’s „spannender“ gemacht. 🙃</p>`
         ],
         choices: [
-      { label: "Was jetzt? (Entscheiden)", effects: [{ type: "log", text: "Ihr atmet kurz durch. Jetzt kommt die Entscheidung." }], next: "D5_DECIDE" },
-      { label: "Nochmal kurz checken (zurück)", effects: [{ type: "log", text: "Ihr wollt nichts übersehen und geht nochmal die Route durch." }], next: "D5_SEARCH" }
-    ]
-    , next: "END_A" },
-          { label: "Rausposaunen (Chaos-Ende)", effects: [{ type: "log", text: "Du gehst auf Drama. Es wird laut." }], next: "END_B" },
-          { label: "Code komplett nutzen (Geheim-Ende)", condition: (s) => (Number(s.flags.codePieces) || 0) >= 3 && s.flags.usbDecoded && s.stats.kreativitaet >= 6, effects: [{ type: "log", text: "Du setzt alles zusammen und checkst die Tradition." }], next: "END_C" }
+          {
+            label: "Was jetzt? (Entscheiden)",
+            effects: [{ type: "log", text: "Ihr atmet kurz durch. Jetzt kommt die Entscheidung." }],
+            next: "D5_DECIDE"
+          },
+          {
+            label: "Nochmal kurz checken (zurück)",
+            effects: [{ type: "log", text: "Ihr wollt nichts übersehen und geht nochmal die Route durch." }],
+            next: "D5_SEARCH"
+          },
+          {
+            label: "Rausposaunen (Chaos-Ende)",
+            effects: [{ type: "log", text: "Du gehst auf Drama. Es wird laut." }],
+            next: "END_B"
+          },
+          {
+            label: "Code komplett nutzen (Geheim-Ende)",
+            condition: (s) => (Number(s.flags.codePieces) || 0) >= 3 && s.flags.usbDecoded && s.stats.kreativitaet >= 6,
+            effects: [{ type: "log", text: "Du setzt alles zusammen und checkst die Tradition." }],
+            next: "END_C"
+          }
         ]
       },
 
