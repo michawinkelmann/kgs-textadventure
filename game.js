@@ -941,11 +941,22 @@ function syncMapTabs(){
     const wrap = document.createElement("div");
     wrap.className = "q";
 
-    for (const q of (WORLD.quests || [])){
-      const doneSteps = q.steps.filter(s => s.done(state)).length;
-      const total = q.steps.length;
+    const sections = {
+      active: [],
+      inactive: [],
+      done: []
+    };
 
+    function getQuestStatus(doneSteps, total){
+      if (total > 0 && doneSteps >= total) return "done";
+      if (doneSteps > 0) return "active";
+      return "inactive";
+    }
+
+    function buildQuestBlock(q, doneSteps, total, status){
       const block = document.createElement("div");
+      block.className = `q__quest q__quest--${status}`;
+
       const t = document.createElement("div");
       t.className = "q__title";
       t.textContent = `${q.title} (${doneSteps}/${total})`;
@@ -967,8 +978,67 @@ function syncMapTabs(){
         block.appendChild(row);
       }
 
-      wrap.appendChild(block);
+      return block;
     }
+
+    function sectionTitle(text){
+      const title = document.createElement("div");
+      title.className = "q__sectionTitle";
+      title.textContent = text;
+      return title;
+    }
+
+    for (const q of (WORLD.quests || [])){
+      const doneSteps = q.steps.filter(s => s.done(state)).length;
+      const total = q.steps.length;
+      const status = getQuestStatus(doneSteps, total);
+      const block = buildQuestBlock(q, doneSteps, total, status);
+      sections[status].push(block);
+    }
+
+    const activeSection = document.createElement("div");
+    activeSection.className = "q__section";
+    activeSection.appendChild(sectionTitle("Aktiv"));
+    if (sections.active.length){
+      for (const quest of sections.active) activeSection.appendChild(quest);
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "help__muted";
+      empty.textContent = "Derzeit keine aktiven Quests.";
+      activeSection.appendChild(empty);
+    }
+    wrap.appendChild(activeSection);
+
+    const optionalSection = document.createElement("details");
+    optionalSection.className = "q__section q__section--optional";
+
+    const optionalSummary = document.createElement("summary");
+    optionalSummary.className = "q__sectionTitle q__sectionTitle--summary";
+    optionalSummary.textContent = "Optional / Noch nicht gestartet";
+    optionalSection.appendChild(optionalSummary);
+
+    if (sections.inactive.length){
+      for (const quest of sections.inactive) optionalSection.appendChild(quest);
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "help__muted";
+      empty.textContent = "Alle optionalen Quests wurden gestartet.";
+      optionalSection.appendChild(empty);
+    }
+    wrap.appendChild(optionalSection);
+
+    const doneSection = document.createElement("div");
+    doneSection.className = "q__section";
+    doneSection.appendChild(sectionTitle("Abgeschlossen"));
+    if (sections.done.length){
+      for (const quest of sections.done) doneSection.appendChild(quest);
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "help__muted";
+      empty.textContent = "Noch keine abgeschlossenen Quests.";
+      doneSection.appendChild(empty);
+    }
+    wrap.appendChild(doneSection);
 
     els.questBox.appendChild(wrap);
   }

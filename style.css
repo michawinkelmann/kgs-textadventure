@@ -184,8 +184,26 @@ body{
 .pill:hover{ border-color: rgba(59,130,246,.50); background: rgba(59,130,246,.12); }
 
 /* Quest list */
-.q{ display:flex; flex-direction:column; gap: 10px; }
-.q__title{ font-weight: 850; margin-bottom: 2px; }
+.q{ display:flex; flex-direction:column; gap: 12px; }
+.q__section{ display:flex; flex-direction:column; gap: 8px; }
+.q__section--optional{ border-top: 1px solid rgba(255,255,255,.10); padding-top: 8px; }
+.q__sectionTitle{ font-weight: 850; font-size: 13px; letter-spacing: .2px; color: rgba(229,231,235,.95); }
+.q__sectionTitle--summary{ cursor:pointer; list-style:none; }
+.q__sectionTitle--summary::-webkit-details-marker{ display:none; }
+.q__sectionTitle--summary::before{ content:"▸ "; color: var(--muted); }
+.q__section--optional[open] .q__sectionTitle--summary::before{ content:"▾ "; }
+.q__quest{
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: var(--radiusSm);
+  padding: 8px;
+  background: rgba(2,6,23,.2);
+}
+.q__quest--active{
+  border-color: rgba(59,130,246,.50);
+  box-shadow: inset 3px 0 0 rgba(59,130,246,.55);
+}
+.q__quest--done{ border-color: rgba(34,197,94,.35); }
+.q__title{ font-weight: 850; margin-bottom: 4px; }
 .q__step{ display:flex; gap: 8px; font-size: 13px; line-height: 1.35; }
 .q__dot{
   width: 10px; height: 10px; border-radius: 999px; margin-top: 4px;
