@@ -337,6 +337,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
     }
 
     const npcId = npcHit.id;
+    // Guard: In dieser Funktion wird ausschließlich `npcId` als NPC-Identifier verwendet.
 
     // Quest-specific handovers
     if (npcId === "sauer" && inv.id === "usb_c_kabel" && state.flags.q_ipad_started && !state.flags.q_ipad_done){
@@ -375,35 +376,35 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
 
     
     // --- Erweiterte Sidequests / Hauptquest (V6) ---
-    if (targetId === "frech" && inv.id === "pinselset" && state.flags.q_kunst_started && !state.flags.q_kunst_done){
+    if (npcId === "frech" && inv.id === "pinselset" && state.flags.q_kunst_started && !state.flags.q_kunst_done){
       api.removeItem(inv.id);
       state.flags.q_kunst_done = true;
       api.say("system", "✅ Du gibst das **Pinselset** ab. Dörte Frech grinst: \"Perfekt!\"");
       return;
     }
 
-    if (targetId === "hoffrichter" && inv.id === "klebeband" && state.flags.q_poster_started && !state.flags.q_poster_done){
+    if (npcId === "hoffrichter" && inv.id === "klebeband" && state.flags.q_poster_started && !state.flags.q_poster_done){
       api.removeItem(inv.id);
       state.flags.q_poster_done = true;
       api.say("system", "✅ Klebeband übergeben. Das Plakat hängt – und hält.");
       return;
     }
 
-    if (targetId === "jeske" && inv.id === "konfliktkarten" && state.flags.q_frieden_started && !state.flags.q_frieden_done){
+    if (npcId === "jeske" && inv.id === "konfliktkarten" && state.flags.q_frieden_started && !state.flags.q_frieden_done){
       api.removeItem(inv.id);
       state.flags.q_frieden_done = true;
       api.say("system", "✅ Konfliktkarten übergeben. Friedensrunde gerettet.");
       return;
     }
 
-    if (targetId === "fischer" && inv.id === "kaenguru_bogen" && state.flags.q_kaenguru_started && !state.flags.q_kaenguru_done){
+    if (npcId === "fischer" && inv.id === "kaenguru_bogen" && state.flags.q_kaenguru_started && !state.flags.q_kaenguru_done){
       api.removeItem(inv.id);
       state.flags.q_kaenguru_done = true;
       api.say("system", "✅ Känguru‑Bogen abgegeben. Jetzt wird geknobelt.");
       return;
     }
 
-    if (targetId === "kraemer" && inv.id === "laborbrille" && state.flags.q_nawi_started && !api.hasItem("werkstattpass")){
+    if (npcId === "kraemer" && inv.id === "laborbrille" && state.flags.q_nawi_started && !api.hasItem("werkstattpass")){
       api.removeItem(inv.id);
       api.giveItem("werkstattpass");
       state.flags.q_nawi_done = true;
@@ -411,7 +412,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       return;
     }
 
-    if (targetId === "religa" && inv.id === "ballpumpe" && state.flags.q_sport_started && !api.hasItem("sportpass")){
+    if (npcId === "religa" && inv.id === "ballpumpe" && state.flags.q_sport_started && !api.hasItem("sportpass")){
       api.removeItem(inv.id);
       api.giveItem("sportpass");
       state.flags.q_sport_done = true;
@@ -419,27 +420,27 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       return;
     }
 
-    if (targetId === "thienel" && inv.id === "dienstplan" && state.flags.q_dienstplan_started && !state.flags.q_dienstplan_done){
+    if (npcId === "thienel" && inv.id === "dienstplan" && state.flags.q_dienstplan_started && !state.flags.q_dienstplan_done){
       api.removeItem(inv.id);
       state.flags.q_dienstplan_done = true;
       api.say("system", "✅ Dienstplan übergeben. Aushänge gerettet.");
       return;
     }
 
-    if (targetId === "steinbeck" && inv.id === "vokabelkarten" && state.flags.q_sprachen_started && !state.flags.q_sprachen_done){
+    if (npcId === "steinbeck" && inv.id === "vokabelkarten" && state.flags.q_sprachen_started && !state.flags.q_sprachen_done){
       api.removeItem(inv.id);
       state.flags.q_sprachen_done = true;
       api.say("system", "✅ Vokabelkarten übergeben. Sprach‑Panik abgewendet.");
       return;
     }
 
-    if (targetId === "remmers" && inv.id === "skript_seite" && state.flags.q_theater_started && !state.flags.q_theater_done){
+    if (npcId === "remmers" && inv.id === "skript_seite" && state.flags.q_theater_started && !state.flags.q_theater_done){
       api.removeItem(inv.id);
       state.flags.q_theater_done = true;
       api.say("system", "✅ Skript‑Seite übergeben. Probe kann weitergehen.");
       return;
     }
-api.say("system", "Die Übergabe hat gerade keinen Effekt (oder ist nicht nötig).");
+    api.say("system", "Die Übergabe hat gerade keinen Effekt (oder ist nicht nötig).");
   }
 
   function answerLegacy(rest){
