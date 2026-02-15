@@ -1088,11 +1088,13 @@ function syncMapTabs(){
 if (els.mapModeNear && els.mapModeAll){
   els.mapModeNear.addEventListener("click", () => {
     state.mapMode = "near";
+    saveAuto();
     syncMapTabs();
     renderMap();
   });
   els.mapModeAll.addEventListener("click", () => {
     state.mapMode = "all";
+    saveAuto();
     syncMapTabs();
     renderMap();
   });
