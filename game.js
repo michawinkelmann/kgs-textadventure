@@ -1445,9 +1445,8 @@ function syncMapTabs(){
     wrap.className = "q";
 
     const sections = {
-      active: [],
-      inactive: [],
-      done: []
+      main: { active: [], inactive: [], done: [] },
+      side: { active: [], inactive: [], done: [] }
     };
 
     function getQuestStatus(doneSteps, total){
@@ -1495,7 +1494,8 @@ function syncMapTabs(){
       const doneSteps = q.steps.filter(step => step.done(state)).length;
       const total = q.steps.length;
       const status = getQuestStatus(doneSteps, total);
-      sections[status].push(buildQuestBlock(q, doneSteps, total, status));
+      const bucket = q.category === "side" ? "side" : "main";
+      sections[bucket][status].push(buildQuestBlock(q, doneSteps, total, status));
     }
 
     if (nextStepCmds && nextStepCmds.length){
@@ -1507,16 +1507,29 @@ function syncMapTabs(){
 
     const activeSection = document.createElement("div");
     activeSection.className = "q__section";
-    activeSection.appendChild(sectionTitle("Aktiv"));
-    if (sections.active.length){
-      for (const quest of sections.active) activeSection.appendChild(quest);
+    activeSection.appendChild(sectionTitle("Hauptquests – Aktiv"));
+    if (sections.main.active.length){
+      for (const quest of sections.main.active) activeSection.appendChild(quest);
     } else {
       const empty = document.createElement("div");
       empty.className = "help__muted";
-      empty.textContent = "Derzeit keine aktiven Quests.";
+      empty.textContent = "Derzeit keine aktiven Hauptquests.";
       activeSection.appendChild(empty);
     }
     wrap.appendChild(activeSection);
+
+    const sideSection = document.createElement("div");
+    sideSection.className = "q__section";
+    sideSection.appendChild(sectionTitle("Nebenaufgaben"));
+    if (sections.side.active.length){
+      for (const quest of sections.side.active) sideSection.appendChild(quest);
+    } else {
+      const empty = document.createElement("div");
+      empty.className = "help__muted";
+      empty.textContent = "Keine aktiven Nebenaufgaben.";
+      sideSection.appendChild(empty);
+    }
+    wrap.appendChild(sideSection);
 
     const optionalDetails = document.createElement("details");
     optionalDetails.className = "q__section q__section--optional";
@@ -1528,13 +1541,14 @@ function syncMapTabs(){
 
     const inactiveSection = document.createElement("div");
     inactiveSection.className = "q__section";
-    inactiveSection.appendChild(sectionTitle("Optional / Noch nicht gestartet"));
-    if (sections.inactive.length){
-      for (const quest of sections.inactive) inactiveSection.appendChild(quest);
+    inactiveSection.appendChild(sectionTitle("Noch nicht gestartet"));
+    const inactiveQuests = [...sections.main.inactive, ...sections.side.inactive];
+    if (inactiveQuests.length){
+      for (const quest of inactiveQuests) inactiveSection.appendChild(quest);
     } else {
       const empty = document.createElement("div");
       empty.className = "help__muted";
-      empty.textContent = "Alle optionalen Quests wurden gestartet.";
+      empty.textContent = "Alle Quests wurden gestartet.";
       inactiveSection.appendChild(empty);
     }
     optionalDetails.appendChild(inactiveSection);
@@ -1542,8 +1556,9 @@ function syncMapTabs(){
     const doneSection = document.createElement("div");
     doneSection.className = "q__section";
     doneSection.appendChild(sectionTitle("Abgeschlossen"));
-    if (sections.done.length){
-      for (const quest of sections.done) doneSection.appendChild(quest);
+    const doneQuests = [...sections.main.done, ...sections.side.done];
+    if (doneQuests.length){
+      for (const quest of doneQuests) doneSection.appendChild(quest);
     } else {
       const empty = document.createElement("div");
       empty.className = "help__muted";

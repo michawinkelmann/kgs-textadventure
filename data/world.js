@@ -121,6 +121,7 @@ window.WORLD = {
     // --- V4-Quests (Basis) ---
     {
       id: "mensa",
+      category: "main",
       title: "Mensa‑Ready",
       steps: [
         { text: "Sprich im Sekretariat mit Anja Pietsch.", done: s => !!s.flags.q_mensa_started },
@@ -132,6 +133,7 @@ window.WORLD = {
     },
     {
       id: "ipad",
+      category: "main",
       title: "iPad‑Rettung",
       steps: [
         { text: "Rede in der Mediothek mit Thomas Sauer.", done: s => !!s.flags.q_ipad_started },
@@ -142,6 +144,7 @@ window.WORLD = {
     },
     {
       id: "presse",
+      category: "main",
       title: "Presse‑AG Mini‑Bericht",
       steps: [
         { text: "Rede in der Aula mit Maren Engel.", done: s => !!s.flags.q_presse_started },
@@ -151,6 +154,7 @@ window.WORLD = {
     },
     {
       id: "plan",
+      category: "main",
       title: "Stundenplan‑Chaos",
       steps: [
         { text: "Rede in der Schulleitung mit Mascha Seiberlich‑Ehrhardt.", done: s => !!s.flags.q_plan_started },
@@ -162,6 +166,7 @@ window.WORLD = {
     // --- Neue Hauptquest (Variante 2) ---
     {
       id: "finale",
+      category: "main",
       title: "Tag der offenen Tür: Aula‑Finale",
       steps: [
         { text: "Starte die Hauptquest: rede mit Tjark Ommen (Schulleitung).", done: s => !!s.flags.q_finale_started },
@@ -178,6 +183,7 @@ window.WORLD = {
     // --- Sidequests ---
     {
       id: "qr",
+      category: "side",
       title: "QR‑Rallye (WLAN‑Code)",
       steps: [
         { text: "Rede mit Ole Semrau (Digitalisierung).", done: s => !!s.flags.q_qr_started },
@@ -189,6 +195,7 @@ window.WORLD = {
     },
     {
       id: "kunst",
+      category: "side",
       title: "Kunst‑AG: Farbe bekennen",
       steps: [
         { text: "Rede mit Dörte Frech (Ästhetik).", done: s => !!s.flags.q_kunst_started },
@@ -198,6 +205,7 @@ window.WORLD = {
     },
     {
       id: "poster",
+      category: "side",
       title: "Aushang‑Aktion (Gleichstellung)",
       steps: [
         { text: "Rede mit Jenny Hoffrichter (Gleichstellungsbeauftragte).", done: s => !!s.flags.q_poster_started },
@@ -207,6 +215,7 @@ window.WORLD = {
     },
     {
       id: "frieden",
+      category: "side",
       title: "Friedensrunde (Soziales Lernen)",
       steps: [
         { text: "Rede mit Simona Jeske (Soziales Lernen).", done: s => !!s.flags.q_frieden_started },
@@ -216,6 +225,7 @@ window.WORLD = {
     },
     {
       id: "kaenguru",
+      category: "side",
       title: "Känguru‑Bogen (Mathe/Info)",
       steps: [
         { text: "Rede mit Dr. Jan‑Wilhelm Fischer.", done: s => !!s.flags.q_kaenguru_started },
@@ -225,6 +235,7 @@ window.WORLD = {
     },
     {
       id: "experiment",
+      category: "side",
       title: "Labor‑Zugang (Naturwissenschaften)",
       steps: [
         { text: "Rede mit Kevin Krämer (NaWi).", done: s => !!s.flags.q_nawi_started },
@@ -234,6 +245,7 @@ window.WORLD = {
     },
     {
       id: "sport",
+      category: "side",
       title: "Ball‑Mission (Sport & Ganztag)",
       steps: [
         { text: "Rede mit Christoph Religa (Sport).", done: s => !!s.flags.q_sport_started },
@@ -243,6 +255,7 @@ window.WORLD = {
     },
     {
       id: "dienstplan",
+      category: "side",
       title: "Gremien‑Druck (Personalrat)",
       steps: [
         { text: "Rede mit Alfred Thienel (Personalrat).", done: s => !!s.flags.q_dienstplan_started },
@@ -252,6 +265,7 @@ window.WORLD = {
     },
     {
       id: "sprachen",
+      category: "side",
       title: "Vokabel‑Alarm (Fremdsprachen)",
       steps: [
         { text: "Rede mit Johanna Steinbeck.", done: s => !!s.flags.q_sprachen_started },
@@ -261,11 +275,50 @@ window.WORLD = {
     },
     {
       id: "theater",
+      category: "side",
       title: "Theaterprobe (Deutsch/DS)",
       steps: [
         { text: "Rede mit Kathrin Remmers.", done: s => !!s.flags.q_theater_started },
         { text: "Finde die Skript‑Seite (Aula: Sitzreihe untersuchen).", done: s => s.inventory.includes("skript_seite") || !!s.flags.q_theater_done },
         { text: "Gib die Skript‑Seite an Kathrin Remmers.", done: s => !!s.flags.q_theater_done }
+      ]
+    },
+    {
+      id: "barriere",
+      category: "side",
+      title: "Barriere‑Check (Nebenaufgabe)",
+      steps: [
+        { text: "Rede mit Kristina Peper in der Pausenhalle.", done: s => !!s.flags.q_barriere_started },
+        { text: "Schau dir das Wegweiser‑Schild auf dem Schulhof an.", done: s => !!s.flags.q_barriere_schild },
+        { text: "Gib Kristina Peper eine kurze Rückmeldung.", done: s => !!s.flags.q_barriere_done }
+      ]
+    },
+    {
+      id: "atem",
+      category: "side",
+      title: "Atempause (Nebenaufgabe)",
+      steps: [
+        { text: "Untersuche im Beratungsraum die Ruhekarte.", done: s => !!s.flags.q_atem_started },
+        { text: "Nimm den Hinweis mit und rede mit Simona Jeske.", done: s => !!s.flags.q_atem_done }
+      ]
+    },
+    {
+      id: "werkbank",
+      category: "side",
+      title: "Werkbank‑Check (Nebenaufgabe)",
+      steps: [
+        { text: "Rede mit Kay Kretzer in der AWT‑Werkstatt.", done: s => !!s.flags.q_werkbank_started },
+        { text: "Untersuche die Werkzeugbank in der Werkstatt.", done: s => !!s.flags.q_werkbank_checked },
+        { text: "Melde dich bei Kay Kretzer zurück.", done: s => !!s.flags.q_werkbank_done }
+      ]
+    },
+    {
+      id: "tribuene",
+      category: "side",
+      title: "Tribünen‑Gruß (Nebenaufgabe)",
+      steps: [
+        { text: "Untersuche die kleine Tribüne auf dem Sportplatz.", done: s => !!s.flags.q_tribuene_started },
+        { text: "Rede danach mit Christoph Religa.", done: s => !!s.flags.q_tribuene_done }
       ]
     }
   ],
@@ -972,6 +1025,17 @@ window.WORLD = {
       aliases: ["jeske", "simona"],
       description: "Prävention, Gespräch, Teamgefühl – sie hat die Ruhe weg.",
       onTalk: (state, api) => {
+        if (state.flags.q_atem_started && !state.flags.q_atem_done){
+          state.flags.q_atem_done = true;
+          api.say("system",
+            "**Simona Jeske**\n" +
+            "Danke für den Hinweis aus dem Beratungsraum. Ich hänge die Atemkarte gleich aus.\n" +
+            "✅ Nebenaufgabe abgeschlossen: **Atempause**\n" +
+            "💬 Kleiner Vorteil: Bei Stress hilft oft `wo` + einmal tief durchatmen."
+          );
+          return;
+        }
+
         state.flags.q_frieden_started = true;
 
         if (state.flags.q_frieden_done){
@@ -1139,6 +1203,18 @@ window.WORLD = {
       aliases: ["religa", "christoph"],
       description: "Sport‑Energie: motivierend, direkt, fair. Und er hasst platte Bälle.",
       onTalk: (state, api) => {
+        if (state.flags.q_tribuene_started && !state.flags.q_tribuene_done){
+          state.flags.q_tribuene_done = true;
+          api.changeReputation("religa", 1);
+          api.say("system",
+            "**Christoph Religa**\n" +
+            "Starker Blick von der Tribüne. Das motiviert das Team direkt.\n" +
+            "✅ Nebenaufgabe abgeschlossen: **Tribünen‑Gruß**\n" +
+            "🏟️ Kosmetik: ‚Team Sport‘ nickt dir anerkennend zu."
+          );
+          return;
+        }
+
         state.flags.q_sport_started = true;
 
         if (api.hasItem("sportpass")){
@@ -1162,6 +1238,24 @@ window.WORLD = {
       aliases: ["kretzer", "kay"],
       description: "AWT‑Werkstatt: Schrauben, Holz, Ideen. Und ein Auge für Sicherheit.",
       onTalk: (state, api) => {
+        if (!state.flags.q_werkbank_started){
+          state.flags.q_werkbank_started = true;
+          api.say("system", "**Kay Kretzer**\nKannst du kurz einen Blick auf die Werkzeugbank werfen? Da fehlt angeblich ein Hinweiszettel.");
+          return;
+        }
+
+        if (state.flags.q_werkbank_checked && !state.flags.q_werkbank_done){
+          state.flags.q_werkbank_done = true;
+          api.changeReputation("kretzer", 1);
+          api.say("system",
+            "**Kay Kretzer**\n" +
+            "Top, genau den Hinweis brauchte ich.\n" +
+            "✅ Nebenaufgabe abgeschlossen: **Werkbank‑Check**\n" +
+            "🔧 Vorteil: Du kennst jetzt eine nützliche Abkürzung über die Werkstattwege."
+          );
+          return;
+        }
+
         if (!api.hasItem("werkstattpass")){
           api.say("system",
             "**Kay Kretzer**\n" +
@@ -1241,6 +1335,32 @@ window.WORLD = {
       aliases: ["peper", "kristina"],
       description: "Sie achtet darauf, dass Wege für alle funktionieren. Und sie sieht Details sofort.",
       onTalk: (state, api) => {
+        if (!state.flags.q_barriere_started){
+          state.flags.q_barriere_started = true;
+          api.say("system",
+            "**Kristina Peper**\n" +
+            "Hast du kurz Zeit für einen **Barriere‑Check**? Schau dir bitte das Wegweiser‑Schild auf dem Schulhof an."
+          );
+          return;
+        }
+
+        if (state.flags.q_barriere_done){
+          api.say("system", "**Kristina Peper**\nDanke nochmal. Deine Rückmeldung hat dem Team richtig geholfen.");
+          return;
+        }
+
+        if (state.flags.q_barriere_schild){
+          state.flags.q_barriere_done = true;
+          api.changeReputation("peper", 1);
+          api.say("system",
+            "**Kristina Peper**\n" +
+            "Super beobachtet. Ich notiere das direkt fürs Team.\n" +
+            "✅ Nebenaufgabe abgeschlossen: **Barriere‑Check**\n" +
+            "🙂 Sympathie‑Boost bei Kristina Peper."
+          );
+          return;
+        }
+
         api.say("system",
           "**Kristina Peper**\n" +
           "Wenn du heute unterwegs bist: Achte auf Barrieren. Kleine Dinge machen viel aus."
@@ -1313,6 +1433,11 @@ window.WORLD = {
           aliases: ["schild", "wegweiser"],
           description: "Pfeile: Aula, Mensa, Sporthalle… und ein kleines ‚Bitte nicht über die Beete‘.",
           onExamine: (state, api) => {
+            if (state.flags.q_barriere_started && !state.flags.q_barriere_schild){
+              state.flags.q_barriere_schild = true;
+              api.say("system", "✅ Du notierst dir einen Hinweis fürs Leitsystem. Melde dich bei Kristina Peper zurück.");
+              return;
+            }
             api.say("system", "Du fühlst dich kurz wie in einem Open‑World‑Game – nur mit Pausengong.");
           }
         }
@@ -1438,7 +1563,21 @@ window.WORLD = {
       ],
       items: [],
       npcs: ["jeske"],
-      objects: {}
+      objects: {
+        ruhekarte: {
+          name: "Ruhekarte",
+          aliases: ["ruhe", "ruhekarte", "atemkarte"],
+          description: "Eine kleine Karte mit Atemtipp und kurzer Checkliste für stressige Momente.",
+          onExamine: (state, api) => {
+            if (state.flags.q_atem_started){
+              api.say("system", "Du hast die Ruhekarte schon gelesen. Vielleicht freut sich Simona Jeske über den Hinweis.");
+              return;
+            }
+            state.flags.q_atem_started = true;
+            api.say("system", "🧘 Nebenaufgabe gestartet: **Atempause**. Nimm den Hinweis mit zu Simona Jeske.");
+          }
+        }
+      }
     },
 
     kunstwerkstatt: {
@@ -1701,6 +1840,11 @@ window.WORLD = {
           aliases: ["bank", "werkzeug", "werkzeugbank"],
           description: "Eine Werkbank voller Ordnung (und trotzdem findet man nichts).",
           onExamine: (state, api) => {
+            if (state.flags.q_werkbank_started && !state.flags.q_werkbank_checked){
+              state.flags.q_werkbank_checked = true;
+              api.say("system", "📝 Du findest den gesuchten Hinweiszettel zwischen den Werkzeugkästen.");
+              return;
+            }
             api.say("system", "Du findest: Kabelbinder. Holzreste. Und den Drang, etwas zu bauen.");
           }
         }
@@ -2076,6 +2220,11 @@ window.WORLD = {
           aliases: ["tribuene", "tribüne", "bank"],
           description: "Du setzt dich kurz. Das Leben ist gut, solange kein Sprinttest ansteht.",
           onExamine: (state, api) => {
+            if (!state.flags.q_tribuene_started){
+              state.flags.q_tribuene_started = true;
+              api.say("system", "🏁 Nebenaufgabe gestartet: **Tribünen‑Gruß**. Religa freut sich über ein kurzes Update.");
+              return;
+            }
             api.say("system", "Du siehst die Schule aus einer anderen Perspektive. Orientierung: +10.");
           }
         }
