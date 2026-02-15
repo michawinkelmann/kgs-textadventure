@@ -159,6 +159,20 @@ body{
   padding: 10px;
   margin-bottom: 12px;
 }
+.help__next{
+  border-color: rgba(250,204,21,.58);
+  background: linear-gradient(160deg, rgba(245,158,11,.24), rgba(30,41,59,.92));
+  box-shadow: 0 10px 26px rgba(245,158,11,.22), inset 0 0 0 1px rgba(255,255,255,.08);
+}
+
+.help details > summary{
+  cursor: pointer;
+  list-style: none;
+}
+.help details > summary::-webkit-details-marker{ display:none; }
+.help details > summary::before{ content:"▸ "; color: var(--muted); }
+.help details[open] > summary::before{ content:"▾ "; }
+
 .help__muted{ color: var(--muted); font-size: 13px; }
 .help__list{ margin:0; padding-left:18px; font-size: 13px; line-height: 1.45; }
 .help code{
