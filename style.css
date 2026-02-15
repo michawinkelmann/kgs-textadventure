@@ -160,6 +160,14 @@ body{
   margin-bottom: 12px;
 }
 .help__muted{ color: var(--muted); font-size: 13px; }
+.help__priority{
+  margin-bottom: 10px;
+  padding: 10px;
+  border: 1px solid rgba(59,130,246,.45);
+  background: rgba(59,130,246,.12);
+  border-radius: 10px;
+  font-size: 13px;
+}
 .help__list{ margin:0; padding-left:18px; font-size: 13px; line-height: 1.45; }
 .help code{
   font-family: var(--mono);

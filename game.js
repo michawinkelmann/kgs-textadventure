@@ -27,7 +27,26 @@
     inventory: [...(WORLD?.start?.inventory || [])],
     flags: { ...(WORLD?.start?.flags || {}) },
     log: [],
-    taken: {} // itemId -> true (für Locations-Items)
+    taken: {}, // itemId -> true (für Locations-Items)
+    priorityHint: ""
+  };
+
+  const NEXT_STEP_COMMANDS = {
+    mensa: ["rede pietsch", "gehen mediothek", "antworte mediothek", "gehen hausmeister", "gehen mensa"],
+    ipad: ["rede sauer", "gehen sekretariat2", "gehen lehrerzimmer", "gib usb_c_kabel sauer"],
+    presse: ["rede engel", "gehen trakt3", "gib presse_notiz engel"],
+    plan: ["rede seiberlich", "gehen it_labor", "gib stundenplan stunkel"],
+    finale: ["rede ommen", "gehen sekretariat", "gehen lehrerzimmer", "gehen cafeteria", "gehen it_labor", "rede semrau", "gehen serverraum", "gehen aula"],
+    qr: ["rede semrau", "untersuche aushang", "gehen mensa", "gehen sporthalle", "rede semrau"],
+    kunst: ["rede frech", "gehen sekretariat2", "gib pinselset frech"],
+    poster: ["rede hoffrichter", "gehen hausmeister", "gib klebeband hoffrichter"],
+    frieden: ["rede jeske", "gehen mediothek", "gib konfliktkarten jeske"],
+    kaenguru: ["rede fischer", "gehen it_labor", "gib kaenguru_bogen fischer"],
+    nawi: ["rede kraemer", "gehen hausmeister", "gib laborbrille kraemer"],
+    sport: ["rede religa", "gehen sporthalle", "gib ballpumpe religa"],
+    dienstplan: ["rede thienel", "gehen it_labor", "gib dienstplan thienel"],
+    sprachen: ["rede steinbeck", "gehen cafeteria", "gib vokabelkarten steinbeck"],
+    theater: ["rede remmers", "untersuche sitzreihe", "gib skript_seite remmers"]
   };
 
   function nowTag(){
@@ -241,6 +260,41 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
     api.say("system", "Chat geleert.");
   }
 
+  function getQuestProgressSnapshot(){
+    const snap = {};
+    for (const q of (WORLD.quests || [])){
+      snap[q.id] = q.steps.filter(s => s.done(state)).length;
+    }
+    return snap;
+  }
+
+  function getPriorityHintText(){
+    return state.priorityHint || "";
+  }
+
+  function getQuestNextCommand(quest){
+    const nextIdx = quest.steps.findIndex(step => !step.done(state));
+    if (nextIdx < 0) return "quests";
+    const cmds = NEXT_STEP_COMMANDS[quest.id] || [];
+    return cmds[nextIdx] || "quests";
+  }
+
+  function suggestNextStep(beforeProgress){
+    if (!beforeProgress) return;
+    for (const q of (WORLD.quests || [])){
+      const beforeDone = beforeProgress[q.id] || 0;
+      const nowDone = q.steps.filter(s => s.done(state)).length;
+      if (nowDone <= beforeDone) continue;
+
+      const command = getQuestNextCommand(q);
+      const hintText = `Als Nächstes: \`${command}\``;
+      state.priorityHint = hintText;
+      api.say("system", hintText);
+      renderHelp();
+      return;
+    }
+  }
+
   function talkTo(q){
     if (!q){
       api.say("system", "Mit wem? Beispiel: `rede pietsch`");
@@ -252,6 +306,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       return;
     }
     const { npc } = hit;
+    const beforeProgress = getQuestProgressSnapshot();
     if (typeof npc.onTalk === "function"){
       npc.onTalk(state, api);
     } else if (Array.isArray(npc.dialogue) && npc.dialogue.length){
@@ -263,6 +318,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
     } else {
       api.say("system", `**${npc.name}** (${npc.role})\n…`);
     }
+    suggestNextStep(beforeProgress);
     renderHelp();
   }
 
@@ -274,8 +330,10 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
 
     const obj = getObjectByQuery(q);
     if (obj){
+      const beforeProgress = getQuestProgressSnapshot();
       api.say("system", `**${obj.name}**\n${obj.description}`);
       if (typeof obj.onExamine === "function") obj.onExamine(state, api);
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -415,6 +473,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
     }
 
     const npcId = npcHit.id;
+    const beforeProgress = getQuestProgressSnapshot();
     // Guard: In dieser Funktion wird ausschließlich `npcId` als NPC-Identifier verwendet.
 
     // Quest-specific handovers
@@ -427,6 +486,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
         "✅ Quest abgeschlossen: **iPad‑Rettung**\n" +
         "Du bekommst: **IT‑Pass** (IT‑Labor ist freigeschaltet)."
       );
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -437,6 +497,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
         "**Maren Engel** nimmt die Notiz.\n" +
         "✅ Quest abgeschlossen: **Presse‑AG Mini‑Bericht**"
       );
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -449,6 +510,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
         "✅ Quest abgeschlossen: **Stundenplan‑Chaos**\n" +
         "Du bekommst: **Flur‑Pass**."
       );
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -458,6 +520,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.removeItem(inv.id);
       state.flags.q_kunst_done = true;
       api.say("system", "✅ Du gibst das **Pinselset** ab. Dörte Frech grinst: \"Perfekt!\"");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -465,6 +528,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.removeItem(inv.id);
       state.flags.q_poster_done = true;
       api.say("system", "✅ Klebeband übergeben. Das Plakat hängt – und hält.");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -472,6 +536,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.removeItem(inv.id);
       state.flags.q_frieden_done = true;
       api.say("system", "✅ Konfliktkarten übergeben. Friedensrunde gerettet.");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -479,6 +544,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.removeItem(inv.id);
       state.flags.q_kaenguru_done = true;
       api.say("system", "✅ Känguru‑Bogen abgegeben. Jetzt wird geknobelt.");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -487,6 +553,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.giveItem("werkstattpass");
       state.flags.q_nawi_done = true;
       api.say("system", "✅ Schutzbrille übergeben. Du bekommst einen **Werkstatt‑Pass**.");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -495,6 +562,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.giveItem("sportpass");
       state.flags.q_sport_done = true;
       api.say("system", "✅ Ballpumpe abgegeben. Du bekommst einen **Sportplatz‑Pass**.");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -502,6 +570,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.removeItem(inv.id);
       state.flags.q_dienstplan_done = true;
       api.say("system", "✅ Dienstplan übergeben. Aushänge gerettet.");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -509,6 +578,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.removeItem(inv.id);
       state.flags.q_sprachen_done = true;
       api.say("system", "✅ Vokabelkarten übergeben. Sprach‑Panik abgewendet.");
+      suggestNextStep(beforeProgress);
       return;
     }
 
@@ -516,6 +586,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.removeItem(inv.id);
       state.flags.q_theater_done = true;
       api.say("system", "✅ Skript‑Seite übergeben. Probe kann weitergehen.");
+      suggestNextStep(beforeProgress);
       return;
     }
     api.say("system", "Die Übergabe hat gerade keinen Effekt (oder ist nicht nötig).");
@@ -981,6 +1052,14 @@ function syncMapTabs(){
     const cmds = [];
     cmds.push("hilfe", "wo", "quests", "inventar");
 
+    const priorityHint = getPriorityHintText();
+    if (priorityHint){
+      const prio = document.createElement("div");
+      prio.className = "help__priority";
+      prio.innerHTML = `<strong>Priorität</strong><div style="margin-top:6px">${priorityHint.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</div>`;
+      els.contextBox.appendChild(prio);
+    }
+
     for (const e of (loc?.exits || [])){
       cmds.push(`gehen ${e.aliases?.[0] || e.label}`);
     }
@@ -1137,6 +1216,7 @@ function syncMapTabs(){
         locationId: state.locationId,
         
         mapMode: state.mapMode,inventory: state.inventory,
+        priorityHint: state.priorityHint,
         flags: state.flags,
         log: state.log,
         taken: state.taken
@@ -1159,6 +1239,7 @@ function syncMapTabs(){
       state.locationId = data.locationId || state.locationId;
       
       state.mapMode = (data.mapMode === "all" ? "all" : "near");state.inventory = Array.isArray(data.inventory) ? data.inventory : state.inventory;
+      state.priorityHint = typeof data.priorityHint === "string" ? data.priorityHint : "";
       state.flags = data.flags || state.flags;
       state.log = Array.isArray(data.log) ? data.log : [];
       state.taken = data.taken || {};
@@ -1175,6 +1256,7 @@ function syncMapTabs(){
     state.flags = { ...(WORLD.start.flags || {}) };
     state.log = [];
     state.taken = {};
+    state.priorityHint = "";
     renderAll();
 
     api.say("system",
