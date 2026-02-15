@@ -41,24 +41,6 @@
     actionCount: 0
   };
 
-  const NEXT_STEP_COMMANDS = {
-    mensa: ["rede pietsch", "gehen mediothek", "antworte mediothek", "gehen hausmeister", "gehen mensa"],
-    ipad: ["rede sauer", "gehen sekretariat2", "gehen lehrerzimmer", "gib usb_c_kabel sauer"],
-    presse: ["rede engel", "gehen trakt3", "gib presse_notiz engel"],
-    plan: ["rede seiberlich", "gehen it_labor", "gib stundenplan stunkel"],
-    finale: ["rede ommen", "gehen sekretariat", "gehen lehrerzimmer", "gehen cafeteria", "gehen it_labor", "rede semrau", "gehen serverraum", "gehen aula"],
-    qr: ["rede semrau", "untersuche aushang", "gehen mensa", "gehen sporthalle", "rede semrau"],
-    kunst: ["rede frech", "gehen sekretariat2", "gib pinselset frech"],
-    poster: ["rede hoffrichter", "gehen hausmeister", "gib klebeband hoffrichter"],
-    frieden: ["rede jeske", "gehen mediothek", "gib konfliktkarten jeske"],
-    kaenguru: ["rede fischer", "gehen it_labor", "gib kaenguru_bogen fischer"],
-    nawi: ["rede kraemer", "gehen hausmeister", "gib laborbrille kraemer"],
-    sport: ["rede religa", "gehen sporthalle", "gib ballpumpe religa"],
-    dienstplan: ["rede thienel", "gehen it_labor", "gib dienstplan thienel"],
-    sprachen: ["rede steinbeck", "gehen cafeteria", "gib vokabelkarten steinbeck"],
-    theater: ["rede remmers", "untersuche sitzreihe", "gib skript_seite remmers"]
-  };
-
   function nowTag(){
     const d = new Date();
     return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
@@ -511,8 +493,8 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
   function getQuestNextCommand(quest){
     const nextIdx = quest.steps.findIndex(step => !step.done(state));
     if (nextIdx < 0) return "quests";
-    const cmds = NEXT_STEP_COMMANDS[quest.id] || [];
-    return cmds[nextIdx] || "quests";
+    const step = quest.steps[nextIdx];
+    return buildCommandForQuestStep(step, currentLoc()) || "quests";
   }
 
   function suggestNextStep(beforeProgress){
@@ -1053,6 +1035,164 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
     return `gehen ${token}`;
   }
 
+  function commandTowardsLocation(targetLocationId){
+    if (!targetLocationId) return null;
+    const path = shortestRoute(state.locationId, targetLocationId);
+    if (!path || path.length < 2) return null;
+    return exitCommand(path[0], path[1]);
+  }
+
+  function firstAlias(value, fallback){
+    const token = value?.aliases?.[0] || fallback;
+    return norm(token || "");
+  }
+
+  function findNpcLocationId(npcId){
+    if (!npcId) return null;
+    for (const [locId, loc] of Object.entries(WORLD.locations || {})){
+      if ((loc.npcs || []).includes(npcId)) return locId;
+    }
+    return null;
+  }
+
+  function findItemLocationId(itemId){
+    if (!itemId) return null;
+    for (const [locId, loc] of Object.entries(WORLD.locations || {})){
+      if ((loc.items || []).includes(itemId)) return locId;
+    }
+    return null;
+  }
+
+  function findObjectLocationId(objectKey){
+    if (!objectKey) return null;
+    for (const [locId, loc] of Object.entries(WORLD.locations || {})){
+      if (loc?.objects?.[objectKey]) return locId;
+    }
+    return null;
+  }
+
+  function findEntityIdByName(entities, text){
+    if (!text) return null;
+    const needle = norm(text);
+    for (const [id, entity] of Object.entries(entities || {})){
+      const names = [entity?.name, ...(entity?.aliases || [])].filter(Boolean).map(norm);
+      if (names.some(name => needle.includes(name))) return id;
+    }
+    return null;
+  }
+
+  function inferStepMeta(step){
+    const text = norm(step?.text || "");
+    if (!text) return {};
+
+    const meta = {};
+    if (text.includes("antworte")) meta.verb = "antworte";
+    else if (text.includes("rede") || text.includes("sprich")) meta.verb = "rede";
+    else if (text.includes("gib")) meta.verb = "gib";
+    else if (text.includes("untersuche") || text.includes("schau")) meta.verb = "untersuche";
+    else if (text.includes("nimm")) meta.verb = "nimm";
+    else if (text.includes("geh")) meta.verb = "gehen";
+
+    meta.targetNpcId = findEntityIdByName(WORLD.npcs, text);
+    meta.targetItemId = findEntityIdByName(WORLD.items, text);
+    meta.targetLocationId = findEntityIdByName(WORLD.locations, text);
+
+    if (!meta.targetObjectKey){
+      for (const loc of Object.values(WORLD.locations || {})){
+        for (const [objKey, obj] of Object.entries(loc?.objects || {})){
+          const names = [obj?.name, ...(obj?.aliases || []), objKey].filter(Boolean).map(norm);
+          if (names.some(name => text.includes(name))){
+            meta.targetObjectKey = objKey;
+            return meta;
+          }
+        }
+      }
+    }
+
+    return meta;
+  }
+
+  function questStepMeta(step){
+    if (!step) return {};
+    const explicit = {
+      verb: step.verb,
+      targetNpcId: step.targetNpcId,
+      targetItemId: step.targetItemId,
+      targetLocationId: step.targetLocationId,
+      targetObjectKey: step.targetObjectKey
+    };
+    if (Object.values(explicit).some(Boolean)) return explicit;
+    return inferStepMeta(step);
+  }
+
+  function buildCommandForQuestStep(step, loc){
+    const meta = questStepMeta(step);
+    if (!meta.verb) return null;
+
+    const targetLocationId = meta.targetLocationId
+      || findNpcLocationId(meta.targetNpcId)
+      || findObjectLocationId(meta.targetObjectKey)
+      || (meta.targetItemId && !api.hasItem(meta.targetItemId) ? findItemLocationId(meta.targetItemId) : null);
+
+    if (meta.verb === "gehen"){
+      return commandTowardsLocation(meta.targetLocationId);
+    }
+
+    if (targetLocationId && state.locationId !== targetLocationId){
+      return commandTowardsLocation(targetLocationId);
+    }
+
+    if (meta.verb === "rede" && meta.targetNpcId){
+      const npc = WORLD.npcs[meta.targetNpcId];
+      return `rede ${firstAlias(npc, npc?.name)}`;
+    }
+
+    if (meta.verb === "untersuche"){
+      const obj = loc?.objects?.[meta.targetObjectKey];
+      if (obj) return `untersuche ${firstAlias(obj, obj.name)}`;
+      return null;
+    }
+
+    if (meta.verb === "nimm" && meta.targetItemId){
+      if (api.hasItem(meta.targetItemId)) return null;
+      const item = WORLD.items[meta.targetItemId];
+      return item ? `nimm ${firstAlias(item, item.name)}` : null;
+    }
+
+    if (meta.verb === "gib" && meta.targetItemId && meta.targetNpcId){
+      if (!api.hasItem(meta.targetItemId)){
+        const itemLoc = findItemLocationId(meta.targetItemId);
+        if (itemLoc && itemLoc !== state.locationId) return commandTowardsLocation(itemLoc);
+        const availableHere = getLocationItemsById(state.locationId);
+        if (availableHere.includes(meta.targetItemId)){
+          const item = WORLD.items[meta.targetItemId];
+          return `nimm ${firstAlias(item, item?.name)}`;
+        }
+        return null;
+      }
+      const item = WORLD.items[meta.targetItemId];
+      const npc = WORLD.npcs[meta.targetNpcId];
+      return `gib ${firstAlias(item, item?.name)} ${firstAlias(npc, npc?.name)}`;
+    }
+
+    if (meta.verb === "antworte"){
+      const token = meta.targetObjectKey || meta.targetItemId || "mediothek";
+      return `antworte ${norm(token)}`;
+    }
+
+    return null;
+  }
+
+  function getActiveQuestStep(){
+    for (const q of (WORLD.quests || [])){
+      const steps = q.steps || [];
+      const doneSteps = steps.filter(step => step.done(state)).length;
+      if (doneSteps === 0 || doneSteps >= steps.length) continue;
+      return { quest: q, step: steps[doneSteps], stepIndex: doneSteps };
+    }
+    return null;
+  }
+
   function renderMap(){
   if (!els.mapBox) return;
   const map = WORLD.map;
@@ -1450,48 +1590,10 @@ function syncMapTabs(){
   }
 
   function buildNextStepCommands(loc){
-    const quests = WORLD.quests || [];
-
-    for (const q of quests){
-      const steps = q.steps || [];
-      const doneSteps = steps.filter(step => step.done(state)).length;
-      if (doneSteps === 0 || doneSteps >= steps.length) continue;
-
-      const cmds = [];
-      const stepText = norm(steps[doneSteps]?.text || "");
-
-      if (stepText.includes("rede") && (loc?.npcs || []).length){
-        const npcId = (loc.npcs || []).find(id => {
-          const npc = WORLD.npcs[id];
-          return npc && stepText.includes(norm(npc.name));
-        }) || loc.npcs[0];
-        const npc = WORLD.npcs[npcId];
-        if (npc) cmds.push(`rede ${npc.aliases?.[0] || norm(npc.name).split(" ").slice(-1)[0]}`);
-      }
-
-      if (stepText.includes("untersuche") && Object.keys(loc?.objects || {}).length){
-        const objectName = Object.keys(loc.objects).find(key => stepText.includes(norm(key)));
-        const obj = objectName ? loc.objects[objectName] : Object.values(loc.objects)[0];
-        if (obj) cmds.push(`untersuche ${obj.aliases?.[0] || norm(obj.name)}`);
-      }
-
-      if (stepText.includes("gib") && state.inventory.length){
-        const invItem = state.inventory[0];
-        const item = WORLD.items[invItem];
-        if (item && (loc?.npcs || []).length){
-          const npc = WORLD.npcs[loc.npcs[0]];
-          if (npc) cmds.push(`gib ${item.aliases?.[0] || norm(item.name)} ${npc.aliases?.[0] || norm(npc.name).split(" ").slice(-1)[0]}`);
-        }
-      }
-
-      if ((stepText.includes("geh") || stepText.includes("in die") || stepText.includes("im ")) && (loc?.exits || []).length){
-        const unlockedExit = loc.exits.find(ex => !(ex.locked && ex.lock?.type === "item" && !api.hasItem(ex.lock.itemId)));
-        if (unlockedExit) cmds.push(`gehen ${unlockedExit.aliases?.[0] || unlockedExit.label}`);
-      }
-
-      if (cmds.length){
-        return [...new Set(cmds)].slice(0, 2);
-      }
+    const active = getActiveQuestStep();
+    if (active){
+      const primary = buildCommandForQuestStep(active.step, loc);
+      if (primary) return [...new Set([primary, "quests"])].slice(0, 2);
     }
 
     const fallback = [];
