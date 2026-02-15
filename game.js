@@ -228,6 +228,7 @@
 - \`rede <name>\`
 - \`nimm <item>\`
 - \`gib <item> <name>\`
+- \`gib <name> <item>\`
 - \`inventar\`
 - \`quests\`
 
@@ -356,26 +357,60 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
   }
 
   function giveItem(rest){
-    // Format: gib <item> <name>
+    // Formate: gib <item> <name> | gib <name> <item>
     const parts = (rest || "").split(" ").filter(Boolean);
     if (parts.length < 2){
       api.say("system", "Wie genau? Beispiel: `gib usb_c_kabel sauer`");
       return;
     }
 
-    // Heuristik: item = alles außer letztes Wort, target = letztes Wort
-    const target = parts.slice(-1)[0];
-    const itemQuery = parts.slice(0, -1).join(" ");
+    let inv = null;
+    let npcHit = null;
+    let sawNpc = false;
+    let sawInvItem = false;
 
-    const inv = getInvItemByQuery(itemQuery);
-    if (!inv){
-      api.say("system", "Dieses Item hast du nicht.");
-      return;
+    // Alle möglichen Trennstellen testen (vorwärts + rückwärts),
+    // damit sowohl "gib <item> <npc>" als auch "gib <npc> <item>" erkannt werden.
+    const splitIndexes = [];
+    for (let i = 1; i < parts.length; i++) splitIndexes.push(i);
+    for (let i = parts.length - 1; i >= 1; i--) splitIndexes.push(i);
+
+    for (const splitAt of splitIndexes){
+      const left = parts.slice(0, splitAt).join(" ");
+      const right = parts.slice(splitAt).join(" ");
+
+      const leftInv = getInvItemByQuery(left);
+      const rightNpc = getNpcByQuery(right);
+      const leftNpc = getNpcByQuery(left);
+      const rightInv = getInvItemByQuery(right);
+
+      if (leftInv || rightInv) sawInvItem = true;
+      if (leftNpc || rightNpc) sawNpc = true;
+
+      if (leftInv && rightNpc){
+        inv = leftInv;
+        npcHit = rightNpc;
+        break;
+      }
+
+      if (leftNpc && rightInv){
+        inv = rightInv;
+        npcHit = leftNpc;
+        break;
+      }
     }
 
-    const npcHit = getNpcByQuery(target);
-    if (!npcHit){
-      api.say("system", "Diese Person ist gerade nicht hier.");
+    if (!inv || !npcHit){
+      if (sawNpc && !sawInvItem){
+        api.say("system", "Person erkannt, aber dieses Item hast du nicht im Inventar.");
+        return;
+      }
+      if (sawInvItem && !sawNpc){
+        api.say("system", "Item erkannt, aber diese Person ist gerade nicht hier.");
+        return;
+      }
+
+      api.say("system", "Wie genau? Beispiele: `gib usb_c_kabel sauer` oder `gib sauer usb_c_kabel`");
       return;
     }
 
