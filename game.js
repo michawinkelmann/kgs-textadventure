@@ -162,6 +162,40 @@
     return null;
   }
 
+  function isExitCurrentlyLocked(ex){
+    return ex?.locked && ex.lock?.type === "item" && !api.hasItem(ex.lock.itemId);
+  }
+
+  function listExitLabels(){
+    const loc = currentLoc();
+    return (loc?.exits || []).map(ex => isExitCurrentlyLocked(ex) ? `${ex.label} (gesperrt)` : ex.label);
+  }
+
+  function findExitSuggestion(q){
+    const qn = norm(q);
+    if (!qn) return null;
+
+    const exits = currentLoc()?.exits || [];
+    const candidates = [];
+
+    for (const ex of exits){
+      const tokens = [ex.label, ...(ex.aliases || [])].filter(Boolean).map(norm);
+      for (const token of tokens){
+        candidates.push({ ex, token });
+      }
+    }
+
+    const prefixMatch = candidates.find(c => c.token.startsWith(qn) || qn.startsWith(c.token));
+    if (prefixMatch) return prefixMatch.ex;
+
+    const byDistance = candidates
+      .map(c => ({ ...c, dist: Math.abs(c.token.length - qn.length) + [...qn].filter(ch => !c.token.includes(ch)).length }))
+      .sort((a, b) => a.dist - b.dist)[0];
+
+    if (!byDistance || byDistance.dist > Math.max(2, Math.floor(qn.length / 2))) return null;
+    return byDistance.ex;
+  }
+
   function describeLocation(){
     const loc = currentLoc();
     const items = availableLocationItems(loc).map(id => WORLD.items[id]?.name).filter(Boolean);
@@ -274,7 +308,16 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
 
     const exit = findExitByQuery(q);
     if (!exit){
-      api.say("system", "Dahin kommst du von hier aus nicht direkt.");
+      const options = listExitLabels();
+      const suggestion = findExitSuggestion(q);
+      let msg = "Dahin kommst du von hier aus nicht direkt.";
+      if (options.length){
+        msg += `\nVon hier aus geht: ${options.join(", ")}.`;
+      }
+      if (suggestion){
+        msg += `\nMeintest du **${suggestion.label}**?`;
+      }
+      api.say("system", msg);
       return;
     }
 
