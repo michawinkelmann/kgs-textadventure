@@ -31,8 +31,10 @@
     taken: {}, // itemId -> true (für Locations-Items)
     priorityHint: "",
     eventMemory: {}, // eventId -> moveCount der letzten Auslösung
+    groupSceneMemory: {}, // sceneKey -> actionCount der letzten Auslösung
     spawnedItems: {}, // locationId -> [itemId]
-    moveCount: 0
+    moveCount: 0,
+    actionCount: 0
   };
 
   const NEXT_STEP_COMMANDS = {
@@ -211,10 +213,75 @@
         api.say("system", hintText);
       }
 
+      if (fx.type === "adjustReputation"){
+        const repKey = `ruf_${fx.key || "campus"}`;
+        const delta = Number(fx.delta) || 0;
+        const current = Number(state.flags[repKey]) || 0;
+        state.flags[repKey] = current + delta;
+        if (fx.text){
+          api.say("system", fx.text);
+        }
+      }
+
       if (fx.type === "custom" && typeof fx.run === "function"){
         fx.run(state, api);
       }
     }
+  }
+
+  function sceneMemoryKey(locationId, scene, idx){
+    return `${locationId}:${scene.id || `scene_${idx}`}`;
+  }
+
+  function maybeTriggerGroupScene(locationId, triggerType, options = {}){
+    const loc = WORLD.locations[locationId];
+    const scenes = Array.isArray(loc?.groupScenes) ? loc.groupScenes : [];
+    if (!scenes.length) return false;
+
+    const eligible = scenes.filter((scene, idx) => {
+      const triggers = Array.isArray(scene.triggers) ? scene.triggers : ["enter", "talk"];
+      if (!triggers.includes(triggerType)) return false;
+      const cooldown = Number.isFinite(scene.cooldown) ? scene.cooldown : 3;
+      const memoryKey = sceneMemoryKey(locationId, scene, idx);
+      const lastSeenAt = Number.isFinite(state.groupSceneMemory[memoryKey]) ? state.groupSceneMemory[memoryKey] : -999;
+      const cooldownPassed = (state.actionCount - lastSeenAt) >= cooldown;
+      const conditionOk = typeof scene.when === "function" ? !!scene.when(state) : true;
+      return cooldownPassed && conditionOk;
+    });
+
+    if (!eligible.length) return false;
+
+    const scene = eligible[Math.floor(Math.random() * eligible.length)];
+    const chance = Number.isFinite(scene.chance) ? scene.chance : 0.75;
+    if (!options.force && Math.random() > chance) return false;
+
+    const sceneKey = sceneMemoryKey(locationId, scene, scenes.indexOf(scene));
+    state.groupSceneMemory[sceneKey] = state.actionCount;
+
+    if (scene.title){
+      api.say("system", `**${scene.title}**`);
+    }
+
+    const lines = Array.isArray(scene.lines) ? scene.lines : [];
+    for (const line of lines){
+      if (typeof line === "string"){
+        api.say("system", line);
+        continue;
+      }
+      if (!line || typeof line !== "object") continue;
+      const speaker = line.speaker || "Stimmen im Hintergrund";
+      const text = line.text || "…";
+      api.say("system", `**${speaker}**\n${text}`);
+    }
+
+    if (scene.hint){
+      api.say("system", `💡 ${scene.hint}`);
+    }
+
+    applyEventEffects(scene.effect);
+    renderHelp();
+    saveAuto();
+    return true;
   }
 
   function maybeTriggerLocationEvent(locationId){
@@ -395,7 +462,8 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
 
   function talkTo(q){
     if (!q){
-      api.say("system", "Mit wem? Beispiel: `rede pietsch`");
+      const triggered = maybeTriggerGroupScene(state.locationId, "talk", { force: true });
+      if (!triggered) api.say("system", "Mit wem? Beispiel: `rede pietsch`");
       return;
     }
     const hit = getNpcByQuery(q);
@@ -488,6 +556,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
 
     api.moveTo(exit.to);
     describeLocation();
+    maybeTriggerGroupScene(exit.to, "enter");
     maybeTriggerLocationEvent(exit.to);
   }
 
@@ -1412,8 +1481,10 @@ function syncMapTabs(){
         mapMode: state.mapMode,inventory: state.inventory,
         priorityHint: state.priorityHint,
         eventMemory: state.eventMemory,
+        groupSceneMemory: state.groupSceneMemory,
         spawnedItems: state.spawnedItems,
         moveCount: state.moveCount,
+        actionCount: state.actionCount,
         flags: state.flags,
         log: state.log,
         taken: state.taken
@@ -1438,8 +1509,10 @@ function syncMapTabs(){
       state.mapMode = (data.mapMode === "all" ? "all" : "near");state.inventory = Array.isArray(data.inventory) ? data.inventory : state.inventory;
       state.priorityHint = typeof data.priorityHint === "string" ? data.priorityHint : "";
       state.eventMemory = data.eventMemory || {};
+      state.groupSceneMemory = data.groupSceneMemory || {};
       state.spawnedItems = data.spawnedItems || {};
       state.moveCount = Number.isFinite(data.moveCount) ? data.moveCount : 0;
+      state.actionCount = Number.isFinite(data.actionCount) ? data.actionCount : 0;
       state.flags = data.flags || state.flags;
       state.log = Array.isArray(data.log) ? data.log : [];
       state.taken = data.taken || {};
@@ -1458,8 +1531,10 @@ function syncMapTabs(){
     state.taken = {};
     state.priorityHint = "";
     state.eventMemory = {};
+    state.groupSceneMemory = {};
     state.spawnedItems = {};
     state.moveCount = 0;
+    state.actionCount = 0;
     renderAll();
 
     api.say("system",
@@ -1478,6 +1553,7 @@ function syncMapTabs(){
 
     // Always echo user input
     api.say("user", cmd.raw);
+    state.actionCount += 1;
 
     switch (cmd.verb){
       case "hilfe": help(); break;

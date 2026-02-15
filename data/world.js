@@ -1581,6 +1581,20 @@ window.WORLD = {
       ],
       items: [],
       npcs: ["fischer"],
+      groupScenes: [
+        {
+          id: "flur_knobelrunde",
+          triggers: ["enter", "talk"],
+          cooldown: 4,
+          chance: 0.7,
+          lines: [
+            { speaker: "Dr. Fischer", text: "Kurze Denkpause: Wer den Drucker sucht, ist im IT‑Labor besser aufgehoben." },
+            { speaker: "Schülerstimme", text: "Und wer eine Challenge sucht: Känguru‑Bogen ist heute heiß begehrt." }
+          ],
+          hint: "Optional: `rede fischer` startet die Mathe‑Quest, ist aber kein Pflichtweg.",
+          effect: { type: "adjustReputation", key: "matheflur", delta: 1, text: "📈 Dein Ruf im Mathe/Info‑Flur steigt leicht." }
+        }
+      ],
       objects: {}
     },
 
@@ -1754,6 +1768,23 @@ window.WORLD = {
       ],
       items: [],
       npcs: [],
+      groupScenes: [
+        {
+          id: "mensa_chiptalk",
+          triggers: ["enter", "talk"],
+          cooldown: 5,
+          chance: 0.75,
+          lines: [
+            { speaker: "Mensa‑Team", text: "Heute läuft es flott – mit Chip geht’s am schnellsten." },
+            { speaker: "Stimme aus der Schlange", text: "Wenn dir was fehlt: Hausmeister oder Sekretariat helfen oft weiter." }
+          ],
+          hint: "Optionaler Hinweis: Für Mensa‑Fortschritt lohnt sich `untersuche ausgabe`.",
+          effect: [
+            { type: "setFlag", key: "heard_mensa_group_hint" },
+            { type: "adjustReputation", key: "mensa", delta: 1, text: "🙂 Die Stimmung bleibt freundlich – dein Ruf in der Mensa verbessert sich." }
+          ]
+        }
+      ],
       objects: {
         ausgabe: {
           name: "Ausgabe",
@@ -1831,6 +1862,32 @@ window.WORLD = {
       ],
       items: [],
       npcs: ["engel", "woehler"],
+      groupScenes: [
+        {
+          id: "aula_vorprobe",
+          triggers: ["enter"],
+          cooldown: 4,
+          chance: 0.65,
+          lines: [
+            { speaker: "Maren Engel", text: "Kurz und klar: Wir halten den Ablauf kompakt, dann klappt die Probe." },
+            { speaker: "Dirk Wöhler", text: "Licht steht, Ton checken wir gleich nochmal." }
+          ],
+          hint: "Optional: `rede engel` oder `rede woehler` für individuelle Aufgaben.",
+          effect: { type: "setFlag", key: "heard_aula_groupscene" }
+        },
+        {
+          id: "aula_talkrunde",
+          triggers: ["talk"],
+          cooldown: 3,
+          chance: 0.8,
+          lines: [
+            { speaker: "Bühnencrew", text: "Wir stimmen uns kurz ab: Sicherheit zuerst, dann Bühne frei." },
+            { speaker: "Maren Engel", text: "Wenn du Material dabeihast, nimm gern den direkten Weg über `gib`." }
+          ],
+          hint: "Kein Pflichtpfad: Diese Runde liefert nur Orientierung fürs Finale.",
+          effect: { type: "adjustReputation", key: "aula", delta: 1, text: "👏 Dein Ruf bei der Bühnencrew steigt ein wenig." }
+        }
+      ],
       objects: {
         sitzreihe: {
           name: "Sitzreihe",
