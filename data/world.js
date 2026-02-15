@@ -124,11 +124,11 @@ window.WORLD = {
       category: "main",
       title: "Mensa‑Ready",
       steps: [
-        { text: "Sprich im Sekretariat mit Anja Pietsch.", done: s => !!s.flags.q_mensa_started },
-        { text: "Hol das Codewort in der Mediothek (Schild untersuchen).", done: s => !!s.flags.saw_codeword_mediothek },
-        { text: "Hole den Baustellenpass im Sekretariat (antworte mediothek).", done: s => s.inventory.includes("baustellenpass") },
-        { text: "Finde deinen Mensa‑Chip (Hausmeister‑Stützpunkt → Fundkiste).", done: s => s.inventory.includes("transponderchip") },
-        { text: "In die Mensa: untersuche „Ausgabe“. ", done: s => !!s.flags.q_mensa_done }
+        { text: "Sprich im Sekretariat mit Anja Pietsch.", verb: "rede", targetNpcId: "pietsch", targetLocationId: "sekretariat", done: s => !!s.flags.q_mensa_started },
+        { text: "Hol das Codewort in der Mediothek (Schild untersuchen).", verb: "untersuche", targetObjectKey: "schild", targetLocationId: "mediothek", done: s => !!s.flags.saw_codeword_mediothek },
+        { text: "Hole den Baustellenpass im Sekretariat (antworte mediothek).", verb: "antworte", targetLocationId: "sekretariat", targetObjectKey: "mediothek", done: s => s.inventory.includes("baustellenpass") },
+        { text: "Finde deinen Mensa‑Chip (Hausmeister‑Stützpunkt → Fundkiste).", verb: "untersuche", targetObjectKey: "fundkiste", targetLocationId: "hausmeister", done: s => s.inventory.includes("transponderchip") },
+        { text: "In die Mensa: untersuche „Ausgabe“. ", verb: "untersuche", targetObjectKey: "ausgabe", targetLocationId: "mensa", done: s => !!s.flags.q_mensa_done }
       ]
     },
     {
@@ -136,10 +136,10 @@ window.WORLD = {
       category: "main",
       title: "iPad‑Rettung",
       steps: [
-        { text: "Rede in der Mediothek mit Thomas Sauer.", done: s => !!s.flags.q_ipad_started },
-        { text: "Hole dir von Kerstin Borges (Sekretariat 2) eine Schrankkarte.", done: s => s.inventory.includes("schrankkarte") },
-        { text: "Im Lehrerzimmer: untersuche den Kabel‑Schrank.", done: s => s.inventory.includes("usb_c_kabel") },
-        { text: "Gib das USB‑C‑Kabel an Sauer zurück.", done: s => !!s.flags.q_ipad_done }
+        { text: "Rede in der Mediothek mit Thomas Sauer.", verb: "rede", targetNpcId: "sauer", targetLocationId: "mediothek", done: s => !!s.flags.q_ipad_started },
+        { text: "Hole dir von Kerstin Borges (Sekretariat 2) eine Schrankkarte.", verb: "rede", targetNpcId: "borges", targetLocationId: "sekretariat2", done: s => s.inventory.includes("schrankkarte") },
+        { text: "Im Lehrerzimmer: untersuche den Kabel‑Schrank.", verb: "untersuche", targetObjectKey: "schrank", targetLocationId: "lehrerzimmer", done: s => s.inventory.includes("usb_c_kabel") },
+        { text: "Gib das USB‑C‑Kabel an Sauer zurück.", verb: "gib", targetItemId: "usb_c_kabel", targetNpcId: "sauer", targetLocationId: "mediothek", done: s => !!s.flags.q_ipad_done }
       ]
     },
     {
@@ -147,9 +147,9 @@ window.WORLD = {
       category: "main",
       title: "Presse‑AG Mini‑Bericht",
       steps: [
-        { text: "Rede in der Aula mit Maren Engel.", done: s => !!s.flags.q_presse_started },
-        { text: "Trakt 3: untersuche den Baustellen‑Aushang.", done: s => s.inventory.includes("presse_notiz") },
-        { text: "Gib die Notiz an Maren Engel.", done: s => !!s.flags.q_presse_done }
+        { text: "Rede in der Aula mit Maren Engel.", verb: "rede", targetNpcId: "engel", targetLocationId: "aula", done: s => !!s.flags.q_presse_started },
+        { text: "Trakt 3: untersuche den Baustellen‑Aushang.", verb: "untersuche", targetObjectKey: "aushang_baustelle", targetLocationId: "trakt3", done: s => s.inventory.includes("presse_notiz") },
+        { text: "Gib die Notiz an Maren Engel.", verb: "gib", targetItemId: "presse_notiz", targetNpcId: "engel", targetLocationId: "aula", done: s => !!s.flags.q_presse_done }
       ]
     },
     {
@@ -157,9 +157,9 @@ window.WORLD = {
       category: "main",
       title: "Stundenplan‑Chaos",
       steps: [
-        { text: "Rede in der Schulleitung mit Mascha Seiberlich‑Ehrhardt.", done: s => !!s.flags.q_plan_started },
-        { text: "Drucke im IT‑Labor den Stundenplan (Drucker untersuchen).", done: s => s.inventory.includes("stundenplan") },
-        { text: "Gib den Stundenplan an Jan Stünkel.", done: s => !!s.flags.q_plan_done }
+        { text: "Rede in der Schulleitung mit Mascha Seiberlich‑Ehrhardt.", verb: "rede", targetNpcId: "seiberlich", targetLocationId: "schulleitung", done: s => !!s.flags.q_plan_started },
+        { text: "Drucke im IT‑Labor den Stundenplan (Drucker untersuchen).", verb: "untersuche", targetObjectKey: "drucker", targetLocationId: "it_labor", done: s => s.inventory.includes("stundenplan") },
+        { text: "Gib den Stundenplan an Jan Stünkel.", verb: "gib", targetItemId: "stundenplan", targetNpcId: "stunkel", targetLocationId: "schulleitung", done: s => !!s.flags.q_plan_done }
       ]
     },
 
@@ -169,14 +169,14 @@ window.WORLD = {
       category: "main",
       title: "Tag der offenen Tür: Aula‑Finale",
       steps: [
-        { text: "Starte die Hauptquest: rede mit Tjark Ommen (Schulleitung).", done: s => !!s.flags.q_finale_started },
-        { text: "Hole die Technik‑Checkliste im Sekretariat.", done: s => s.inventory.includes("checkliste") },
-        { text: "Finde den HDMI‑Adapter (Lehrerzimmer: Technikschublade untersuchen).", done: s => s.inventory.includes("hdmi_adapter") },
-        { text: "Finde Batterien fürs Funkmikro (Cafeteria: Fundkorb untersuchen).", done: s => s.inventory.includes("batterien") },
-        { text: "Drucke den Programmflyer (IT‑Labor: Drucker untersuchen).", done: s => s.inventory.includes("programmflyer") },
-        { text: "Besorge den WLAN‑Code (Sidequest: QR‑Rallye bei Ole Semrau).", done: s => s.inventory.includes("wifi_code") },
-        { text: "Serverraum: untersuche das Rack (Beamer‑Config fixen).", done: s => !!s.flags.server_ok },
-        { text: "Aula: untersuche die Bühne – wenn alles passt, ist das Finale geschafft.", done: s => !!s.flags.q_finale_done }
+        { text: "Starte die Hauptquest: rede mit Tjark Ommen (Schulleitung).", verb: "rede", targetNpcId: "ommen", targetLocationId: "schulleitung", done: s => !!s.flags.q_finale_started },
+        { text: "Hole die Technik‑Checkliste im Sekretariat.", verb: "rede", targetNpcId: "pietsch", targetLocationId: "sekretariat", done: s => s.inventory.includes("checkliste") },
+        { text: "Finde den HDMI‑Adapter (Lehrerzimmer: Technikschublade untersuchen).", verb: "untersuche", targetObjectKey: "technikschublade", targetLocationId: "lehrerzimmer", done: s => s.inventory.includes("hdmi_adapter") },
+        { text: "Finde Batterien fürs Funkmikro (Cafeteria: Fundkorb untersuchen).", verb: "untersuche", targetObjectKey: "fundkorb", targetLocationId: "cafeteria", done: s => s.inventory.includes("batterien") },
+        { text: "Drucke den Programmflyer (IT‑Labor: Drucker untersuchen).", verb: "untersuche", targetObjectKey: "drucker", targetLocationId: "it_labor", done: s => s.inventory.includes("programmflyer") },
+        { text: "Besorge den WLAN‑Code (Sidequest: QR‑Rallye bei Ole Semrau).", verb: "rede", targetNpcId: "semrau", targetLocationId: "it_labor", done: s => s.inventory.includes("wifi_code") },
+        { text: "Serverraum: untersuche das Rack (Beamer‑Config fixen).", verb: "untersuche", targetObjectKey: "rack", targetLocationId: "serverraum", done: s => !!s.flags.server_ok },
+        { text: "Aula: untersuche die Bühne – wenn alles passt, ist das Finale geschafft.", verb: "untersuche", targetObjectKey: "buehne", targetLocationId: "aula", done: s => !!s.flags.q_finale_done }
       ]
     },
 
