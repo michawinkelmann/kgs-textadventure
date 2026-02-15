@@ -60,8 +60,12 @@ window.WORLD = {
   start: {
     locationId: "pausenhalle",
     inventory: ["schuelerausweis", "fuenf_euro"],
-    flags: {}
+    flags: {},
+    relationships: {},
+    knownRelationships: {}
   },
+
+  relationshipHighlights: ["pietsch", "sauer", "seiberlich", "engel", "stunkel", "ommen", "semrau"],
 
   events: [
     {
@@ -451,6 +455,8 @@ window.WORLD = {
       aliases: ["pietsch", "frau pietsch", "anja"],
       description: "Beschäftigt, aber freundlich. Wenn es um Mensa/Organisation geht, weiß sie Bescheid.",
       onTalk: (state, api) => {
+        const rep = api.getReputation("pietsch");
+
         if (state.flags.q_mensa_done) {
           api.say("system",
             "**Anja Pietsch**\n" +
@@ -468,6 +474,7 @@ window.WORLD = {
             "**Anja Pietsch**\n" +
             "Gut, dass du da bist. Wir klären zuerst dein Mensa‑Thema – dann läuft der Rest entspannter."
           );
+          api.changeReputation("pietsch", 1);
           return;
         }
 
@@ -490,6 +497,12 @@ window.WORLD = {
         }
 
         if (state.flags.saw_codeword_mediothek && !api.hasItem("baustellenpass")) {
+          if (rep >= 2 && !state.flags.pietsch_fastpass_hint){
+            state.flags.pietsch_fastpass_hint = true;
+            api.say("system", "**Anja Pietsch**\nDu hast zuverlässig geholfen – ich kann den Pass direkt freigeben. Sag einfach: `antworte mediothek`.");
+            api.changeReputation("pietsch", 1);
+            return;
+          }
           api.say("system",
             "**Anja Pietsch**\n" +
             "Codewort sitzt? Super. Jetzt noch `antworte mediothek`, dann bekommst du den Baustellenpass."
@@ -532,12 +545,15 @@ window.WORLD = {
       aliases: ["sauer", "herr sauer", "thomas"],
       description: "Technik‑Ecke, Aushänge, Kabel… er wirkt wie jemand, der Probleme lösungsorientiert anguckt.",
       onTalk: (state, api) => {
+        const rep = api.getReputation("sauer");
+
         if (!state.flags.q_ipad_started) {
           state.flags.q_ipad_started = true;
           api.say("system",
             "**Thomas Sauer**\n" +
             "Mein iPad‑Koffer ist tot, weil ein USB‑C‑Kabel fehlt. Kannst du kurz retten?"
           );
+          api.changeReputation("sauer", 1);
           return;
         }
 
@@ -557,6 +573,14 @@ window.WORLD = {
             "**Thomas Sauer**\n" +
             "Ah! Du hast ein USB‑C‑Kabel. Gib es mir mit: `gib usb_c_kabel sauer`."
           );
+          return;
+        }
+
+        if (rep >= 3 && !api.hasItem("schrankkarte") && !state.flags.sauer_shortcut){
+          state.flags.sauer_shortcut = true;
+          api.giveItem("schrankkarte");
+          api.say("system", "**Thomas Sauer**\nDu bist verlässlich – ich lege dir die Schrankkarte direkt hier bereit. Spare dir den Extra‑Weg.");
+          api.changeReputation("sauer", 1);
           return;
         }
 
@@ -665,6 +689,8 @@ window.WORLD = {
       aliases: ["ommen", "herr ommen", "tjark"],
       description: "Ruhig, organisiert – Schulleitungs‑Energie.",
       onTalk: (state, api) => {
+        const rep = api.getReputation("ommen");
+
         if (!state.flags.q_finale_started) {
           state.flags.q_finale_started = true;
           api.say("system",
@@ -674,6 +700,7 @@ window.WORLD = {
             "Dann: Adapter, Batterien, Programmflyer und WLAN‑Code.\n" +
             "Wenn der Serverraum läuft, sind wir entspannt."
           );
+          api.changeReputation("ommen", 1);
           return;
         }
 
@@ -693,6 +720,12 @@ window.WORLD = {
             "**Tjark Ommen**\n" +
             "Perfekt vorbereitet – jetzt fehlt nur noch die Bühne in der Aula. Du bist kurz vor dem Abschluss."
           );
+          return;
+        }
+
+        if (rep >= 3 && !api.hasItem("checkliste")) {
+          api.giveItem("checkliste");
+          api.say("system", "**Tjark Ommen**\nDu bekommst die kompakte Checkliste direkt von mir – wir sparen Zeit.");
           return;
         }
 
@@ -721,12 +754,15 @@ window.WORLD = {
       aliases: ["seiberlich", "mascha", "frau seiberlich"],
       description: "Stundenpläne, Organisation, Lehrkräfteeinsatz – sie wirkt immer einen Schritt voraus.",
       onTalk: (state, api) => {
+        const rep = api.getReputation("seiberlich");
+
         if (!state.flags.q_plan_started) {
           state.flags.q_plan_started = true;
           api.say("system",
             "**Mascha Seiberlich‑Ehrhardt**\n" +
             "Willkommen im Stundenplan‑Chaos. Wir brauchen schnell einen frischen Ausdruck aus dem IT‑Labor."
           );
+          api.changeReputation("seiberlich", 1);
           return;
         }
 
@@ -746,6 +782,14 @@ window.WORLD = {
             "**Mascha Seiberlich‑Ehrhardt**\n" +
             "Sehr gut, der Ausdruck ist da. Jan Stünkel wartet auf den Plan (`gib stundenplan stunkel`)."
           );
+          return;
+        }
+
+        if (rep >= 3 && !api.hasItem("it_pass") && !state.flags.seiberlich_direct_it_pass){
+          state.flags.seiberlich_direct_it_pass = true;
+          api.giveItem("it_pass");
+          api.say("system", "**Mascha Seiberlich‑Ehrhardt**\nWeil du so zuverlässig bist: Hier ist direkt ein **IT‑Pass** als Abkürzung.");
+          api.changeReputation("seiberlich", 1);
           return;
         }
 
@@ -774,12 +818,15 @@ window.WORLD = {
       aliases: ["engel", "maren", "frau engel"],
       description: "Plant, koordiniert, behält die Ruhe. Sogar wenn überall Papier ist.",
       onTalk: (state, api) => {
+        const rep = api.getReputation("engel");
+
         if (!state.flags.q_presse_started) {
           state.flags.q_presse_started = true;
           api.say("system",
             "**Maren Engel**\n" +
             "Hi! Ich brauche einen kurzen Baustellen‑Mini‑Bericht für die Presse‑AG."
           );
+          api.changeReputation("engel", 1);
           return;
         }
 
@@ -791,6 +838,13 @@ window.WORLD = {
               "Presse‑AG ist versorgt – richtig gut. Danke dir!"
             ])
           );
+          return;
+        }
+
+        if (rep >= 3 && !state.flags.engel_shortcut_note && !api.hasItem("presse_notiz")) {
+          state.flags.engel_shortcut_note = true;
+          api.giveItem("presse_notiz");
+          api.say("system", "**Maren Engel**\nDu arbeitest super mit uns. Ich nehme als Abkürzung eine Kurznotiz von dir und trage den Rest selbst nach.");
           return;
         }
 
@@ -965,12 +1019,15 @@ window.WORLD = {
       aliases: ["semrau", "ole"],
       description: "Digitalisierung, QR‑Codes, iPad‑Ordnung. Und trotzdem nett.",
       onTalk: (state, api) => {
+        const rep = api.getReputation("semrau");
+
         if (!state.flags.q_qr_started) {
           state.flags.q_qr_started = true;
           api.say("system",
             "**Ole Semrau**\n" +
             "QR‑Rallye! Drei Spots scannen, dann bekommst du den WLAN‑Code."
           );
+          api.changeReputation("semrau", 1);
           return;
         }
 
@@ -985,6 +1042,13 @@ window.WORLD = {
         const a = !!state.flags.qr_spot1;
         const b = !!state.flags.qr_spot2;
         const c = !!state.flags.qr_spot3;
+
+        if (rep >= 3 && !a && !b && !c && state.flags.q_finale_started) {
+          api.giveItem("wifi_code");
+          api.say("system", "**Ole Semrau**\nFürs Finale gebe ich dir den WLAN‑Code direkt – du hast dir Vertrauen verdient.");
+          api.changeReputation("semrau", 1);
+          return;
+        }
 
         if (a && b && c) {
           api.giveItem("wifi_code");

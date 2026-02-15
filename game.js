@@ -14,6 +14,7 @@
     nextStepBox: document.querySelector("#nextStepBox"),
     contextBox: document.querySelector("#contextBox"),
     questBox: document.querySelector("#questBox"),
+    relationshipBox: document.querySelector("#relationshipBox"),
     mapBox: document.querySelector("#mapBox"),
     mapModeNear: document.querySelector("#mapModeNear"),
     mapModeAll: document.querySelector("#mapModeAll"),
@@ -26,6 +27,8 @@
   const state = {
     locationId: WORLD?.start?.locationId || "pausenhalle",
     inventory: [...(WORLD?.start?.inventory || [])],
+    relationships: { ...(WORLD?.start?.relationships || {}) },
+    knownRelationships: { ...(WORLD?.start?.knownRelationships || {}) },
     flags: { ...(WORLD?.start?.flags || {}) },
     log: [],
     taken: {}, // itemId -> true (für Locations-Items)
@@ -85,6 +88,30 @@
       state.moveCount += 1;
       renderAll();
       saveAuto();
+    },
+    getReputation(npcId) {
+      if (!npcId) return 0;
+      const val = Number(state.relationships[npcId]);
+      return Number.isFinite(val) ? val : 0;
+    },
+    changeReputation(npcId, delta) {
+      if (!npcId) return 0;
+      const current = api.getReputation(npcId);
+      const next = Math.max(-5, Math.min(5, current + (Number(delta) || 0)));
+      state.relationships[npcId] = next;
+      state.knownRelationships[npcId] = true;
+      saveAuto();
+      renderRelationshipBox();
+      return next;
+    },
+    noteRelationship(npcId) {
+      if (!npcId) return;
+      state.knownRelationships[npcId] = true;
+      if (!Number.isFinite(Number(state.relationships[npcId]))) {
+        state.relationships[npcId] = 0;
+      }
+      saveAuto();
+      renderRelationshipBox();
     }
   };
 
@@ -471,7 +498,8 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       api.say("system", "Hier ist niemand mit diesem Namen.");
       return;
     }
-    const { npc } = hit;
+    const { npc, id } = hit;
+    api.noteRelationship(id);
     const beforeProgress = getQuestProgressSnapshot();
     if (typeof npc.onTalk === "function"){
       npc.onTalk(state, api);
@@ -1344,7 +1372,71 @@ function syncMapTabs(){
     contextDetails.appendChild(info);
     els.contextBox.appendChild(contextDetails);
 
+    renderRelationshipBox();
     renderQuestBox(nextStepCmds);
+  }
+
+  function relationshipLabel(value){
+    if (value >= 3) return "sehr gut";
+    if (value >= 1) return "gut";
+    if (value <= -3) return "kritisch";
+    if (value <= -1) return "kühl";
+    return "neutral";
+  }
+
+  function renderRelationshipBox(){
+    if (!els.relationshipBox) return;
+    els.relationshipBox.innerHTML = "";
+
+    const important = Array.isArray(WORLD.relationshipHighlights) ? WORLD.relationshipHighlights : [];
+    const known = important
+      .filter((npcId) => state.knownRelationships[npcId])
+      .map((npcId) => ({ npcId, npc: WORLD.npcs[npcId], value: api.getReputation(npcId) }))
+      .filter((entry) => entry.npc && entry.npc.name)
+      .sort((a, b) => b.value - a.value || a.npc.name.localeCompare(b.npc.name, "de"));
+
+    if (!known.length){
+      const empty = document.createElement("div");
+      empty.className = "help__muted";
+      empty.textContent = "Sprich mit zentralen NPCs, um Beziehungen sichtbar zu machen.";
+      els.relationshipBox.appendChild(empty);
+      return;
+    }
+
+    const wrap = document.createElement("div");
+    wrap.className = "rel";
+
+    for (const entry of known){
+      const row = document.createElement("div");
+      row.className = "rel__row";
+
+      const name = document.createElement("div");
+      name.className = "rel__name";
+      name.textContent = entry.npc.name;
+
+      const meter = document.createElement("div");
+      meter.className = "rel__meter";
+
+      const bar = document.createElement("div");
+      bar.className = "rel__bar";
+      const fill = document.createElement("div");
+      fill.className = "rel__fill";
+      fill.style.width = `${Math.max(0, Math.min(100, (entry.value + 5) * 10))}%`;
+      bar.appendChild(fill);
+
+      const label = document.createElement("span");
+      label.className = "rel__value";
+      label.textContent = `${entry.value > 0 ? "+" : ""}${entry.value} ${relationshipLabel(entry.value)}`;
+
+      meter.appendChild(bar);
+      meter.appendChild(label);
+
+      row.appendChild(name);
+      row.appendChild(meter);
+      wrap.appendChild(row);
+    }
+
+    els.relationshipBox.appendChild(wrap);
   }
 
   function renderQuestBox(nextStepCmds){
@@ -1479,6 +1571,8 @@ function syncMapTabs(){
         locationId: state.locationId,
         
         mapMode: state.mapMode,inventory: state.inventory,
+        relationships: state.relationships,
+        knownRelationships: state.knownRelationships,
         priorityHint: state.priorityHint,
         eventMemory: state.eventMemory,
         groupSceneMemory: state.groupSceneMemory,
@@ -1507,6 +1601,8 @@ function syncMapTabs(){
       state.locationId = data.locationId || state.locationId;
       
       state.mapMode = (data.mapMode === "all" ? "all" : "near");state.inventory = Array.isArray(data.inventory) ? data.inventory : state.inventory;
+      state.relationships = data.relationships || state.relationships;
+      state.knownRelationships = data.knownRelationships || state.knownRelationships;
       state.priorityHint = typeof data.priorityHint === "string" ? data.priorityHint : "";
       state.eventMemory = data.eventMemory || {};
       state.groupSceneMemory = data.groupSceneMemory || {};
@@ -1526,6 +1622,8 @@ function syncMapTabs(){
     localStorage.removeItem(STORAGE_KEY);
     state.locationId = WORLD.start.locationId;
     state.inventory = [...WORLD.start.inventory];
+    state.relationships = { ...(WORLD.start.relationships || {}) };
+    state.knownRelationships = { ...(WORLD.start.knownRelationships || {}) };
     state.flags = { ...(WORLD.start.flags || {}) };
     state.log = [];
     state.taken = {};
