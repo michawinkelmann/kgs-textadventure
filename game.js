@@ -932,13 +932,22 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
     // Labels: only show for current + neighbors (and in "all" mode: show also for non-faint)
     const showLabel = isHere || isNeighbor || (mode === "all" && !isFaint);
     if (showLabel){
+      const mapWidth = Number((viewBox.split(/\s+/)[2])) || 1000;
+      const labelText = n.label || locId;
+      const placeLeft = n.x > mapWidth - 170;
+
       const label = document.createElementNS(NS, "text");
-      label.setAttribute("x", n.x + 18);
+      label.setAttribute("x", placeLeft ? n.x - 18 : n.x + 18);
       label.setAttribute("y", n.y + 6);
+      label.setAttribute("text-anchor", placeLeft ? "end" : "start");
       label.setAttribute("fill", isFaint ? "rgba(229,231,235,0.50)" : "rgba(229,231,235,0.82)");
-      label.setAttribute("font-size", isHere ? "20" : "18");
+      label.setAttribute("stroke", "rgba(2,6,23,0.92)");
+      label.setAttribute("stroke-width", isHere ? "4" : "3");
+      label.setAttribute("paint-order", "stroke");
+      label.setAttribute("font-size", isHere ? "18" : "16");
+      label.setAttribute("font-weight", isHere ? "700" : "600");
       label.setAttribute("font-family", "system-ui");
-      label.textContent = n.label || locId;
+      label.textContent = labelText;
       g.appendChild(label);
     }
 
