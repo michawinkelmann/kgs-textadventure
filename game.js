@@ -11,6 +11,7 @@
     log: document.querySelector("#log"),
     form: document.querySelector("#inputForm"),
     input: document.querySelector("#commandInput"),
+    nextStepBox: document.querySelector("#nextStepBox"),
     contextBox: document.querySelector("#contextBox"),
     questBox: document.querySelector("#questBox"),
     mapBox: document.querySelector("#mapBox"),
@@ -965,8 +966,67 @@ function syncMapTabs(){
     return wrap;
   }
 
+  function buildNextStepCommands(loc){
+    const quests = WORLD.quests || [];
+
+    for (const q of quests){
+      const steps = q.steps || [];
+      const doneSteps = steps.filter(step => step.done(state)).length;
+      if (doneSteps === 0 || doneSteps >= steps.length) continue;
+
+      const cmds = [];
+      const stepText = norm(steps[doneSteps]?.text || "");
+
+      if (stepText.includes("rede") && (loc?.npcs || []).length){
+        const npcId = (loc.npcs || []).find(id => {
+          const npc = WORLD.npcs[id];
+          return npc && stepText.includes(norm(npc.name));
+        }) || loc.npcs[0];
+        const npc = WORLD.npcs[npcId];
+        if (npc) cmds.push(`rede ${npc.aliases?.[0] || norm(npc.name).split(" ").slice(-1)[0]}`);
+      }
+
+      if (stepText.includes("untersuche") && Object.keys(loc?.objects || {}).length){
+        const objectName = Object.keys(loc.objects).find(key => stepText.includes(norm(key)));
+        const obj = objectName ? loc.objects[objectName] : Object.values(loc.objects)[0];
+        if (obj) cmds.push(`untersuche ${obj.aliases?.[0] || norm(obj.name)}`);
+      }
+
+      if (stepText.includes("gib") && state.inventory.length){
+        const invItem = state.inventory[0];
+        const item = WORLD.items[invItem];
+        if (item && (loc?.npcs || []).length){
+          const npc = WORLD.npcs[loc.npcs[0]];
+          if (npc) cmds.push(`gib ${item.aliases?.[0] || norm(item.name)} ${npc.aliases?.[0] || norm(npc.name).split(" ").slice(-1)[0]}`);
+        }
+      }
+
+      if ((stepText.includes("geh") || stepText.includes("in die") || stepText.includes("im ")) && (loc?.exits || []).length){
+        const unlockedExit = loc.exits.find(ex => !(ex.locked && ex.lock?.type === "item" && !api.hasItem(ex.lock.itemId)));
+        if (unlockedExit) cmds.push(`gehen ${unlockedExit.aliases?.[0] || unlockedExit.label}`);
+      }
+
+      if (cmds.length){
+        return [...new Set(cmds)].slice(0, 2);
+      }
+    }
+
+    const fallback = [];
+    if ((loc?.npcs || []).length){
+      const npc = WORLD.npcs[loc.npcs[0]];
+      if (npc) fallback.push(`rede ${npc.aliases?.[0] || norm(npc.name).split(" ").slice(-1)[0]}`);
+    }
+    if ((loc?.exits || []).length){
+      const ex = loc.exits.find(x => !(x.locked && x.lock?.type === "item" && !api.hasItem(x.lock.itemId))) || loc.exits[0];
+      fallback.push(`gehen ${ex.aliases?.[0] || ex.label}`);
+    }
+    fallback.push("quests");
+    return [...new Set(fallback)].slice(0, 2);
+  }
+
   function renderHelp(){
     const loc = currentLoc();
+    els.nextStepBox.innerHTML = "";
     els.contextBox.innerHTML = "";
 
     const exits = (loc?.exits || []).map(ex => {
@@ -977,6 +1037,13 @@ function syncMapTabs(){
     const npcNames = (loc?.npcs || []).map(id => WORLD.npcs[id]?.name).filter(Boolean);
     const objNames = Object.values(loc?.objects || {}).map(o => o.name).filter(Boolean);
     const locItems = availableLocationItems(loc).map(id => WORLD.items[id]?.name).filter(Boolean);
+
+    const nextStepCmds = buildNextStepCommands(loc);
+    const nextTitle = document.createElement("div");
+    nextTitle.className = "help__muted";
+    nextTitle.textContent = "Empfohlen jetzt:";
+    els.nextStepBox.appendChild(nextTitle);
+    els.nextStepBox.appendChild(contextPills(nextStepCmds));
 
     const cmds = [];
     cmds.push("hilfe", "wo", "quests", "inventar");
@@ -996,11 +1063,19 @@ function syncMapTabs(){
       cmds.push(`nimm ${norm(name)}`);
     }
 
+    const contextDetails = document.createElement("details");
+
+    const contextSummary = document.createElement("summary");
+    contextSummary.className = "help__muted";
+    contextSummary.textContent = "Optionale Kontext-Hinweise";
+    contextDetails.appendChild(contextSummary);
+
     const title = document.createElement("div");
     title.className = "help__muted";
+    title.style.marginTop = "8px";
     title.textContent = "Klickbare Vorschläge:";
-    els.contextBox.appendChild(title);
-    els.contextBox.appendChild(contextPills([...new Set(cmds)].slice(0, 16)));
+    contextDetails.appendChild(title);
+    contextDetails.appendChild(contextPills([...new Set(cmds)].slice(0, 16)));
 
     const info = document.createElement("div");
     info.className = "help__muted";
@@ -1010,12 +1085,13 @@ function syncMapTabs(){
        <div style="margin-top:6px"><strong>Personen:</strong> ${npcNames.length ? npcNames.join(", ") : "—"}</div>
        <div style="margin-top:6px"><strong>Items:</strong> ${locItems.length ? locItems.join(", ") : "—"}</div>
        <div style="margin-top:6px"><strong>Interaktionen:</strong> ${objNames.length ? objNames.join(", ") : "—"}</div>`;
-    els.contextBox.appendChild(info);
+    contextDetails.appendChild(info);
+    els.contextBox.appendChild(contextDetails);
 
-    renderQuestBox();
+    renderQuestBox(nextStepCmds);
   }
 
-  function renderQuestBox(){
+  function renderQuestBox(nextStepCmds){
     els.questBox.innerHTML = "";
     const wrap = document.createElement("div");
     wrap.className = "q";
@@ -1068,11 +1144,17 @@ function syncMapTabs(){
     }
 
     for (const q of (WORLD.quests || [])){
-      const doneSteps = q.steps.filter(s => s.done(state)).length;
+      const doneSteps = q.steps.filter(step => step.done(state)).length;
       const total = q.steps.length;
       const status = getQuestStatus(doneSteps, total);
-      const block = buildQuestBlock(q, doneSteps, total, status);
-      sections[status].push(block);
+      sections[status].push(buildQuestBlock(q, doneSteps, total, status));
+    }
+
+    if (nextStepCmds && nextStepCmds.length){
+      const hint = document.createElement("div");
+      hint.className = "help__muted";
+      hint.textContent = `Priorität: ${nextStepCmds.join(" • ")}`;
+      wrap.appendChild(hint);
     }
 
     const activeSection = document.createElement("div");
@@ -1088,23 +1170,26 @@ function syncMapTabs(){
     }
     wrap.appendChild(activeSection);
 
-    const optionalSection = document.createElement("details");
-    optionalSection.className = "q__section q__section--optional";
+    const optionalDetails = document.createElement("details");
+    optionalDetails.className = "q__section q__section--optional";
 
     const optionalSummary = document.createElement("summary");
     optionalSummary.className = "q__sectionTitle q__sectionTitle--summary";
-    optionalSummary.textContent = "Optional / Noch nicht gestartet";
-    optionalSection.appendChild(optionalSummary);
+    optionalSummary.textContent = "Weitere Quest-Details";
+    optionalDetails.appendChild(optionalSummary);
 
+    const inactiveSection = document.createElement("div");
+    inactiveSection.className = "q__section";
+    inactiveSection.appendChild(sectionTitle("Optional / Noch nicht gestartet"));
     if (sections.inactive.length){
-      for (const quest of sections.inactive) optionalSection.appendChild(quest);
+      for (const quest of sections.inactive) inactiveSection.appendChild(quest);
     } else {
       const empty = document.createElement("div");
       empty.className = "help__muted";
       empty.textContent = "Alle optionalen Quests wurden gestartet.";
-      optionalSection.appendChild(empty);
+      inactiveSection.appendChild(empty);
     }
-    wrap.appendChild(optionalSection);
+    optionalDetails.appendChild(inactiveSection);
 
     const doneSection = document.createElement("div");
     doneSection.className = "q__section";
@@ -1117,8 +1202,9 @@ function syncMapTabs(){
       empty.textContent = "Noch keine abgeschlossenen Quests.";
       doneSection.appendChild(empty);
     }
-    wrap.appendChild(doneSection);
+    optionalDetails.appendChild(doneSection);
 
+    wrap.appendChild(optionalDetails);
     els.questBox.appendChild(wrap);
   }
 
