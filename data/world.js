@@ -1,5 +1,5 @@
 // data/world.js
-// Welt + Mini-Quest (KGS-bezogen, aber ohne private Kontaktdaten)
+// Erweiterte Welt mit drei Quest-Kapiteln
 
 export const WORLD = {
   meta: {
@@ -23,7 +23,7 @@ export const WORLD = {
     fuenf_euro: {
       name: "5‑Euro‑Schein",
       aliases: ["5euro", "fünf euro", "fuenf euro", "schein"],
-      description: "Ein 5‑Euro‑Schein. Perfekt für Notfälle (und vielleicht Mensa‑Dinge).",
+      description: "Ein 5‑Euro‑Schein. Perfekt für Notfälle.",
       takeable: false
     },
     baustellenpass: {
@@ -36,6 +36,24 @@ export const WORLD = {
       name: "Transponderchip",
       aliases: ["chip", "transponder", "mensa chip", "essenchip"],
       description: "Dein Mensa‑Chip. Ohne den läuft (fast) nichts.",
+      takeable: true
+    },
+    laborzugang: {
+      name: "Laborzugangskarte",
+      aliases: ["laborzugang", "zugangskarte", "karte", "labor karte"],
+      description: "Eine Karte mit Hologramm-Aufdruck: Zugang zum Innovationslabor.",
+      takeable: false
+    },
+    energiezelle: {
+      name: "Energiezelle",
+      aliases: ["zelle", "energie", "akku"],
+      description: "Eine geladene Energiezelle für das Solarsystem im Dachgarten.",
+      takeable: true
+    },
+    notiz_der_ag: {
+      name: "AG‑Notiz",
+      aliases: ["notiz", "ag notiz", "zettel"],
+      description: "„Danke! Das Solarsystem läuft wieder. Präsentation gerettet.“",
       takeable: true
     }
   },
@@ -51,8 +69,9 @@ export const WORLD = {
         "Ohne Chip kannst du in der Mensa nichts bestellen.",
         "Vielleicht liegt dein Chip im Hausmeister‑Stützpunkt (Fundkiste).",
         "Wegen Umbau/Brücke brauchst du aber einen Baustellenpass.",
-        "Ich stelle dir einen aus – aber nur, wenn du mir das Codewort aus der Mediothek bringst: Wie heißt der Raum des Schulassistenten?",
-        "Wenn du’s weißt: tippe `antworte <codewort>`."
+        "Ich stelle dir einen aus – aber nur, wenn du mir das Codewort aus der Mediothek bringst.",
+        "Wenn du’s weißt: tippe `antworte <codewort>`.",
+        "Für das neue Innovationslabor brauche ich später noch ein zweites Codewort vom Mensa-Board."
       ]
     },
 
@@ -63,7 +82,8 @@ export const WORLD = {
       description: "Er sitzt zwischen Technik‑Kram und Aushängen. Sieht aus, als hätte er immer einen Plan.",
       dialogue: [
         "Moin! Wenn irgendwas mit Technik klemmt – sag Bescheid.",
-        "Die Mediothek ist hier um die Ecke. Schau dir das Schild an, dann weißt du das Codewort."
+        "Die Mediothek ist hier um die Ecke. Schau dir das Schild an, dann weißt du das Codewort.",
+        "Wenn du später im Labor bist: prüf unbedingt die Ladestation."
       ]
     },
 
@@ -74,7 +94,8 @@ export const WORLD = {
       description: "Hausmeister‑Vibes: Schlüssel, Werkzeug, und ein Blick, der jeden quietschenden Stuhl einschüchtert.",
       dialogue: [
         "Fundkiste? Klar. Wenn’s drin ist, gehört’s dir – wenn du’s beweisen kannst.",
-        "Ah, Baustellenpass hast du. Dann darfst du hier auch sein."
+        "Mit Baustellenpass darfst du hier auch sein.",
+        "Im Dachgarten läuft eine Solar-AG-Demo. Wenn dort etwas fehlt, sag kurz Bescheid."
       ]
     },
 
@@ -85,7 +106,20 @@ export const WORLD = {
       description: "Er wirkt ruhig und organisiert. Schulleitungs‑Energie.",
       dialogue: [
         "Hallo! Schön, dass du dich zurechtfindest.",
-        "Wenn du irgendwo nicht weiterkommst: Frag im Sekretariat, die helfen dir."
+        "Wenn du irgendwo nicht weiterkommst: Frag im Sekretariat, die helfen dir.",
+        "Teamwork ist hier alles – besonders bei Projekttagen."
+      ]
+    },
+
+    karim: {
+      name: "Lea Karim",
+      role: "Leitung Robotik‑AG",
+      aliases: ["karim", "lea", "ag"],
+      description: "Sie koordiniert Materialien und wirkt fokussiert, aber entspannt.",
+      dialogue: [
+        "Hey! Wir richten gerade das Innovationslabor ein.",
+        "Ohne geladene Energiezelle startet unser Modell im Dachgarten nicht.",
+        "Wenn du die Anlage aktivierst, rettest du unsere Präsentation."
       ]
     }
   },
@@ -160,8 +194,7 @@ export const WORLD = {
         schild: {
           name: "Schild am Raum",
           aliases: ["schild", "raum schild", "raumschild"],
-          description:
-            "Da steht groß: „Mediothek“. Klingt nach einem Codewort.",
+          description: "Da steht groß: „Mediothek“. Klingt nach einem Codewort.",
           onExamine: (state, api) => {
             api.setFlag("saw_codeword_mediothek", true);
             api.say("system", "Du prägst dir das Codewort ein: **MEDIOTHEK**.");
@@ -184,6 +217,14 @@ export const WORLD = {
           locked: true,
           lock: { type: "item", itemId: "baustellenpass" },
           lockedText: "Ein Bauzaun blockiert den Weg. Ohne **Baustellenpass** kommst du nicht rüber."
+        },
+        {
+          to: "innovationslabor",
+          label: "Innovationslabor",
+          aliases: ["labor", "innovationslabor", "innovation"],
+          locked: true,
+          lock: { type: "item", itemId: "laborzugang" },
+          lockedText: "Das Labor ist gesichert. Du brauchst eine **Laborzugangskarte** aus dem Sekretariat."
         }
       ],
       items: [],
@@ -252,13 +293,13 @@ export const WORLD = {
         ausgabe: {
           name: "Essensausgabe",
           aliases: ["ausgabe", "essen", "bestellen"],
-          description:
-            "Ein Schild: „Bitte Chip bereithalten.“",
+          description: "Ein Schild: „Bitte Chip bereithalten.“",
           onExamine: (state, api) => {
             if (api.hasItem("transponderchip")) {
-              if (!api.getFlag("won")) {
-                api.setFlag("won", true);
-                api.say("system", "✅ Du hältst deinen Chip hoch. Alles klappt. Mission erfüllt: **Mensa ready!**");
+              if (!api.getFlag("chapter1_complete")) {
+                api.setFlag("chapter1_complete", true);
+                api.say("system", "✅ Kapitel 1 geschafft: **Mensa ready!**");
+                api.say("system", "Neues Ziel: Finde im Mensa-Bereich den Hinweis fürs Innovationslabor.");
               } else {
                 api.say("system", "Du bist schon offiziell Mensa‑ready.");
               }
@@ -266,6 +307,80 @@ export const WORLD = {
               api.say("system", "Ohne Chip geht hier nichts. Tipp: Im Sekretariat fragen (Frau Pietsch).");
             }
           }
+        },
+        schwarzesbrett: {
+          name: "Schwarzes Brett",
+          aliases: ["brett", "schwarzes brett", "board"],
+          description: "Ein Plakat zur Projektwoche mit dem Stichwort: „SOLARIS“.",
+          onExamine: (state, api) => {
+            api.setFlag("saw_codeword_solaris", true);
+            api.say("system", "Du merkst dir das zweite Codewort: **SOLARIS**.");
+          }
+        }
+      }
+    },
+
+    innovationslabor: {
+      name: "Innovationslabor",
+      image: "./assets/innovationslabor.svg",
+      description:
+        "Lötstationen, Whiteboards und Modelle. Hier baut die Robotik‑AG an ihrer Präsentation.",
+      exits: [
+        { to: "trakt3", label: "Zurück nach Trakt 3", aliases: ["trakt3", "trakt 3", "zurück", "zurueck"] },
+        { to: "dachgarten", label: "Treppe zum Dachgarten", aliases: ["dachgarten", "treppe", "dach"] }
+      ],
+      items: [],
+      npcs: ["karim"],
+      objects: {
+        ladestation: {
+          name: "Ladestation",
+          aliases: ["station", "ladestation", "ladegeraet", "ladegerät"],
+          description: "Eine Dockingstation mit einer blinkenden grünen LED.",
+          onExamine: (state, api) => {
+            if (api.hasItem("energiezelle")) {
+              api.say("system", "Die Energiezelle ist bereits in deinem Inventar.");
+              return;
+            }
+            api.giveItem("energiezelle");
+            api.say("system", "Du nimmst eine voll geladene **Energiezelle** mit.");
+          }
+        }
+      }
+    },
+
+    dachgarten: {
+      name: "Dachgarten",
+      image: "./assets/dachgarten.svg",
+      description:
+        "Über den Dächern der Schule: Beete, Sitzbänke und eine kleine Solar-Demostation.",
+      exits: [
+        { to: "innovationslabor", label: "Zurück ins Innovationslabor", aliases: ["labor", "innovationslabor", "zurück", "zurueck"] }
+      ],
+      items: ["notiz_der_ag"],
+      npcs: [],
+      objects: {
+        solarstation: {
+          name: "Solarstation",
+          aliases: ["solar", "solaranlage", "station"],
+          description: "Ein Modell mit Anschluss für eine Energiezelle.",
+          onExamine: (state, api) => {
+            if (!api.hasItem("energiezelle")) {
+              api.say("system", "Die Anlage braucht eine Energiezelle aus dem Innovationslabor.");
+              return;
+            }
+            if (!api.getFlag("chapter3_complete")) {
+              api.setFlag("chapter3_complete", true);
+              api.say("system", "🌞 Die Solaranlage startet! Kapitel 3 abgeschlossen.");
+              api.say("system", "Du siehst eine AG-Notiz auf der Bank. Vielleicht kannst du sie `nimm notiz` einsammeln.");
+            } else {
+              api.say("system", "Die Solaranlage summt stabil vor sich hin.");
+            }
+          }
+        },
+        bank: {
+          name: "Bank",
+          aliases: ["sitzbank", "bank"],
+          description: "Eine Holzbank mit Blick über den Schulhof."
         }
       }
     }

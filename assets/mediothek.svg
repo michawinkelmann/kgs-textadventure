@@ -1,19 +1,19 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0b1220"/>
-      <stop offset="1" stop-color="#0f172a"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b1024"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
     </linearGradient>
   </defs>
-  <rect width="1200" height="800" fill="url(#g)"/>
-  <rect x="90" y="140" width="1020" height="520" rx="28" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
-  <g fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.10)">
-    <rect x="140" y="240" width="200" height="380" rx="18"/>
-    <rect x="360" y="240" width="200" height="380" rx="18"/>
-    <rect x="580" y="240" width="200" height="380" rx="18"/>
-    <rect x="800" y="240" width="260" height="180" rx="18"/>
-    <rect x="800" y="440" width="260" height="180" rx="18"/>
+  <rect width="1400" height="900" fill="url(#bg)"/>
+  <rect x="70" y="100" width="1260" height="700" rx="30" fill="#0f172a" stroke="#4338ca" stroke-opacity=".55"/>
+  <g fill="#1e293b" stroke="#64748b" stroke-opacity=".5">
+    <rect x="130" y="190" width="210" height="510" rx="12"/>
+    <rect x="370" y="190" width="210" height="510" rx="12"/>
+    <rect x="610" y="190" width="210" height="510" rx="12"/>
+    <rect x="850" y="190" width="210" height="510" rx="12"/>
   </g>
-  <text x="140" y="210" fill="rgba(229,231,235,0.9)" font-size="44" font-family="system-ui" font-weight="700">Mediothek / Bücherei</text>
-  <text x="140" y="260" fill="rgba(148,163,184,0.9)" font-size="22" font-family="system-ui">ruhig, Bücher, Arbeitsplätze</text>
+  <rect x="1090" y="190" width="180" height="510" rx="12" fill="#312e81" opacity=".55"/>
+  <text x="130" y="170" fill="#eef2ff" font-size="50" font-family="system-ui" font-weight="800">Mediothek</text>
+  <text x="132" y="735" fill="#cbd5e1" font-size="24" font-family="system-ui">Hinweisraum: Codewort „MEDIOTHEK“</text>
 </svg>

@@ -118,6 +118,24 @@ function getInvItemByQuery(q){
   return null;
 }
 
+function isTaken(itemId){
+  return !!state.flags[`taken_${itemId}`];
+}
+
+function getLocationItemByQuery(q){
+  const qn = norm(q);
+  const loc = currentLoc();
+  const locItems = loc.items || [];
+  for (const itemId of locItems){
+    if (isTaken(itemId)) continue;
+    const item = WORLD.items[itemId];
+    if (!item) continue;
+    const all = [item.name, ...(item.aliases || [])].map(norm);
+    if (all.includes(qn)) return { itemId, item };
+  }
+  return null;
+}
+
 function getObjectByQuery(q){
   const qn = norm(q);
   const loc = currentLoc();
@@ -193,7 +211,35 @@ function examine(q){
     return;
   }
 
+  const locItem = getLocationItemByQuery(q);
+  if (locItem){
+    api.say("system", `**${locItem.item.name}**\n${locItem.item.description}`);
+    return;
+  }
+
   api.say("system", "Dazu finde ich hier nichts Passendes.");
+}
+
+function takeItem(q){
+  if (!q){
+    api.say("system", "Was möchtest du nehmen? Beispiel: `nimm notiz`");
+    return;
+  }
+
+  const locItem = getLocationItemByQuery(q);
+  if (!locItem){
+    api.say("system", "Hier liegt kein passendes Item.");
+    return;
+  }
+
+  if (!locItem.item.takeable){
+    api.say("system", "Das kannst du nicht einfach mitnehmen.");
+    return;
+  }
+
+  api.giveItem(locItem.itemId);
+  api.setFlag(`taken_${locItem.itemId}`, true);
+  api.say("system", `Du nimmst **${locItem.item.name}**.`);
 }
 
 function moveTo(q){
@@ -224,12 +270,12 @@ function answer(rest){
   const loc = currentLoc();
   const a = norm(rest);
 
-  // Quest-Logik: im Sekretariat nach Codewort fragen -> Baustellenpass
   if (loc && loc.name.includes("Sekretariat")){
     if (!api.getFlag("saw_codeword_mediothek")){
       api.say("system", "Du hast noch kein Codewort. Tipp: Geh in die Mediothek und untersuche das Schild.");
       return;
     }
+
     if (a === "mediothek"){
       if (!api.hasItem("baustellenpass")){
         api.giveItem("baustellenpass");
@@ -239,7 +285,26 @@ function answer(rest){
       }
       return;
     }
-    api.say("system", "Das klingt nicht richtig. Tipp: Das Wort steht auf dem Schild in der Mediothek.");
+
+    if (a === "solaris"){
+      if (!api.getFlag("chapter1_complete")){
+        api.say("system", "Das zweite Codewort gilt erst nach Kapitel 1. Prüfe zuerst die Essensausgabe in der Mensa.");
+        return;
+      }
+      if (!api.getFlag("saw_codeword_solaris")){
+        api.say("system", "Fast. Das Codewort findest du am Schwarzen Brett in der Mensa.");
+        return;
+      }
+      if (!api.hasItem("laborzugang")){
+        api.giveItem("laborzugang");
+        api.say("system", "🔓 Neues Kapitel: Du bekommst die **Laborzugangskarte** fürs Innovationslabor.");
+      } else {
+        api.say("system", "Die Laborzugangskarte hast du bereits.");
+      }
+      return;
+    }
+
+    api.say("system", "Das klingt nicht richtig. Tipp: Mögliche Codewörter sind in Mediothek oder Mensa versteckt.");
     return;
   }
 
@@ -260,6 +325,7 @@ function help(){
 - \`untersuche <ding>\`
 - \`rede <name>\`
 - \`inventar\`
+- \`nimm <ding>\`
 - \`antworte <text>\`
 
 Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
@@ -277,6 +343,7 @@ function handleInput(input){
     case "gehen": moveTo(cmd.rest); break;
     case "untersuche": examine(cmd.rest); break;
     case "rede": talkTo(cmd.rest); break;
+    case "nimm": takeItem(cmd.rest); break;
     case "inventar": describeInventory(); break;
     case "antworte": answer(cmd.rest); break;
     case "klar": clearChat(); break;
@@ -353,6 +420,10 @@ function renderHelp(){
 
   // Objects
   const objNames = Object.values(loc.objects || {}).map(o => o.name);
+  const itemNames = (loc.items || [])
+    .filter(itemId => !isTaken(itemId))
+    .map(itemId => WORLD.items[itemId]?.name)
+    .filter(Boolean);
 
   const cmds = [];
 
@@ -370,6 +441,12 @@ function renderHelp(){
   for (const o of Object.values(loc.objects || {})){
     cmds.push(`untersuche ${o.aliases?.[0] || norm(o.name)}`);
   }
+  for (const itemId of (loc.items || [])){
+    if (isTaken(itemId)) continue;
+    const item = WORLD.items[itemId];
+    if (!item) continue;
+    cmds.push(`nimm ${item.aliases?.[0] || norm(item.name)}`);
+  }
   cmds.push("inventar");
 
   const title = document.createElement("div");
@@ -384,7 +461,8 @@ function renderHelp(){
   info.innerHTML =
     `<div><strong>Ausgänge:</strong> ${exits.length ? exits.join(", ") : "—"}</div>
      <div style="margin-top:6px"><strong>Personen:</strong> ${npcNames.length ? npcNames.join(", ") : "—"}</div>
-     <div style="margin-top:6px"><strong>Interaktionen:</strong> ${objNames.length ? objNames.join(", ") : "—"}</div>`;
+     <div style="margin-top:6px"><strong>Interaktionen:</strong> ${objNames.length ? objNames.join(", ") : "—"}</div>
+     <div style="margin-top:6px"><strong>Items vor Ort:</strong> ${itemNames.length ? itemNames.join(", ") : "—"}</div>`;
   els.contextBox.appendChild(info);
 }
 
@@ -440,7 +518,8 @@ function reset(){
 2) Hol dir das Codewort in der **Mediothek** (untersuche das Schild)
 3) Antworte im Sekretariat → Baustellenpass
 4) Über Trakt 3 & Brücke zum Hausmeister‑Stützpunkt → Fundkiste
-5) Mit Chip in die Mensa: untersuche „Ausgabe“`);
+5) Mit Chip in die Mensa: untersuche „Ausgabe"
+6) Kapitel 2+3: Codewort SOLARIS, Laborzugang, Energiezelle & Dachgarten`);
 }
 
 // UI wiring
@@ -461,7 +540,8 @@ renderAll();
 if (!hadSave){
   api.say("system",
 `Willkommen! Du spielst in der ${WORLD.meta.setting}.
-Dein Ziel: **Mensa‑ready** werden. Tipp: Starte mit \`gehen sekretariat\` und \`rede pietsch\`.`);
+Dein Ziel: **3 Kapitel** abschließen (Mensa, Labor, Dachgarten).
+Tipp: Starte mit \`gehen sekretariat\` und \`rede pietsch\`.`);
   describeLocation();
 } else {
   api.say("system", "🔁 Spielstand geladen.");
