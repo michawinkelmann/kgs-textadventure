@@ -63,6 +63,56 @@ window.WORLD = {
     flags: {}
   },
 
+  events: [
+    {
+      id: "pausenhalle_durchsage",
+      locations: ["pausenhalle", "schulhof"],
+      cooldown: 3,
+      chance: 0.7,
+      text: "Eine kurze Durchsage knistert über die Lautsprecher – irgendwo wird schon wieder nach einem Schlüssel gesucht.",
+      effect: {
+        type: "setFlag",
+        key: "heard_campus_durchsage"
+      }
+    },
+    {
+      id: "sekretariat_notizzettel",
+      locations: ["sekretariat", "sekretariat2"],
+      cooldown: 5,
+      chance: 0.55,
+      when: (state) => !state.taken.flur_notiz && !state.inventory.includes("flur_notiz"),
+      text: "Am Kopierer rutscht ein kleiner Zettel vom Stapel. Jemand hat schnell ‚Nicht vergessen: Trakt 3!‘ gekritzelt.",
+      effect: {
+        type: "spawnItem",
+        itemId: "flur_notiz",
+        spawnText: "📌 Ein **Notizzettel** liegt jetzt hier auf dem Tisch."
+      }
+    },
+    {
+      id: "mediothek_hint",
+      locations: ["mediothek", "it_labor"],
+      cooldown: 4,
+      chance: 0.6,
+      when: (state) => !state.flags.q_ipad_done,
+      text: "Zwischen Tastaturklackern hörst du ein halblautes: ‚Frag mal Sauer, der weiß, wo die Ersatzkabel sind.‘",
+      effect: {
+        type: "npcHint",
+        npcId: "sauer"
+      }
+    },
+    {
+      id: "aula_mikro_check",
+      locations: ["aula"],
+      cooldown: 4,
+      chance: 0.6,
+      text: "Vom Bühnenrand weht ein kurzer Soundcheck herüber. Für einen Moment wirkt alles wie vor einer Premiere.",
+      effect: {
+        type: "setFlag",
+        key: "heard_aula_soundcheck"
+      }
+    }
+  ],
+
   quests: [
     // --- V4-Quests (Basis) ---
     {
@@ -384,6 +434,12 @@ window.WORLD = {
       name: "Skript‑Seite",
       aliases: ["skript", "seite", "skript seite"],
       description: "Eine einzelne Seite aus einem Theater‑Skript. Wichtig. Vielleicht.",
+      takeable: true
+    },
+    flur_notiz: {
+      name: "Notizzettel",
+      aliases: ["notiz", "notizzettel", "zettel"],
+      description: "Ein kleiner Zettel mit krakeliger Erinnerung: ‚Trakt 3 zuerst prüfen‘.",
       takeable: true
     }
   },

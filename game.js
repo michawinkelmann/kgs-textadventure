@@ -29,7 +29,10 @@
     flags: { ...(WORLD?.start?.flags || {}) },
     log: [],
     taken: {}, // itemId -> true (für Locations-Items)
-    priorityHint: ""
+    priorityHint: "",
+    eventMemory: {}, // eventId -> moveCount der letzten Auslösung
+    spawnedItems: {}, // locationId -> [itemId]
+    moveCount: 0
   };
 
   const NEXT_STEP_COMMANDS = {
@@ -75,7 +78,9 @@
       renderAll();
     },
     moveTo(locationId) {
+      if (state.locationId === locationId) return;
       state.locationId = locationId;
+      state.moveCount += 1;
       renderAll();
       saveAuto();
     }
@@ -147,7 +152,99 @@
 
   function availableLocationItems(loc){
     const itemIds = loc?.items || [];
-    return itemIds.filter(id => !state.taken[id]);
+    const spawned = state.spawnedItems[state.locationId] || [];
+    const allItems = [...itemIds, ...spawned];
+    return allItems.filter((id, idx) => !state.taken[id] && allItems.indexOf(id) === idx);
+  }
+
+  function getLocationItemsById(locationId){
+    const loc = WORLD.locations[locationId];
+    const baseItems = loc?.items || [];
+    const spawned = state.spawnedItems[locationId] || [];
+    const all = [...baseItems, ...spawned];
+    return all.filter((id, idx) => !state.taken[id] && all.indexOf(id) === idx);
+  }
+
+  function ensureSpawnedItem(locationId, itemId){
+    if (!locationId || !itemId) return false;
+    if (state.taken[itemId] || api.hasItem(itemId)) return false;
+    const locItems = getLocationItemsById(locationId);
+    if (locItems.includes(itemId)) return false;
+    if (!Array.isArray(state.spawnedItems[locationId])) state.spawnedItems[locationId] = [];
+    state.spawnedItems[locationId].push(itemId);
+    return true;
+  }
+
+  function getLocationEvents(locationId){
+    const globalEvents = (WORLD.events || []).filter(ev => !Array.isArray(ev.locations) || ev.locations.includes(locationId));
+    const locEvents = Array.isArray(WORLD.locations[locationId]?.events) ? WORLD.locations[locationId].events : [];
+    return [...globalEvents, ...locEvents];
+  }
+
+  function resolveEventText(event){
+    if (typeof event.text === "function") return event.text(state, api);
+    return event.text || "";
+  }
+
+  function applyEventEffects(effect){
+    if (!effect) return;
+    const effects = Array.isArray(effect) ? effect : [effect];
+
+    for (const fx of effects){
+      if (!fx || typeof fx !== "object") continue;
+
+      if (fx.type === "setFlag" && fx.key){
+        state.flags[fx.key] = fx.value !== undefined ? fx.value : true;
+      }
+
+      if (fx.type === "spawnItem" && fx.itemId){
+        const targetLoc = fx.locationId || state.locationId;
+        const spawned = ensureSpawnedItem(targetLoc, fx.itemId);
+        if (spawned && fx.spawnText){
+          api.say("system", fx.spawnText);
+        }
+      }
+
+      if (fx.type === "npcHint" && fx.npcId){
+        const npc = WORLD.npcs[fx.npcId];
+        const hintText = fx.text || (npc ? `Vielleicht solltest du kurz mit **${npc.name}** sprechen.` : "Du hast das Gefühl, jemand hätte einen hilfreichen Hinweis.");
+        api.say("system", hintText);
+      }
+
+      if (fx.type === "custom" && typeof fx.run === "function"){
+        fx.run(state, api);
+      }
+    }
+  }
+
+  function maybeTriggerLocationEvent(locationId){
+    const events = getLocationEvents(locationId);
+    if (!events.length) return;
+
+    const eligible = events.filter((event, idx) => {
+      const eventId = event.id || `${locationId}_event_${idx}`;
+      const cooldown = Number.isFinite(event.cooldown) ? event.cooldown : 3;
+      const lastSeenAt = Number.isFinite(state.eventMemory[eventId]) ? state.eventMemory[eventId] : -999;
+      const cooldownPassed = (state.moveCount - lastSeenAt) >= cooldown;
+      const conditionOk = typeof event.when === "function" ? !!event.when(state) : true;
+      return cooldownPassed && conditionOk;
+    });
+
+    if (!eligible.length) return;
+
+    const selected = eligible[Math.floor(Math.random() * eligible.length)];
+    const chance = Number.isFinite(selected.chance) ? selected.chance : 0.65;
+    if (Math.random() > chance) return;
+
+    const selectedId = selected.id || `${locationId}_event_${events.indexOf(selected)}`;
+    state.eventMemory[selectedId] = state.moveCount;
+
+    const text = resolveEventText(selected);
+    if (text) api.say("system", text);
+
+    applyEventEffects(selected.effect);
+    renderHelp();
+    saveAuto();
   }
 
   function getLocItemByQuery(q){
@@ -391,6 +488,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
 
     api.moveTo(exit.to);
     describeLocation();
+    maybeTriggerLocationEvent(exit.to);
   }
 
   function takeItem(q){
@@ -860,6 +958,7 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       }
       api.moveTo(locId);
       describeLocation();
+      maybeTriggerLocationEvent(locId);
       return;
     }
 
@@ -1312,6 +1411,9 @@ function syncMapTabs(){
         
         mapMode: state.mapMode,inventory: state.inventory,
         priorityHint: state.priorityHint,
+        eventMemory: state.eventMemory,
+        spawnedItems: state.spawnedItems,
+        moveCount: state.moveCount,
         flags: state.flags,
         log: state.log,
         taken: state.taken
@@ -1335,6 +1437,9 @@ function syncMapTabs(){
       
       state.mapMode = (data.mapMode === "all" ? "all" : "near");state.inventory = Array.isArray(data.inventory) ? data.inventory : state.inventory;
       state.priorityHint = typeof data.priorityHint === "string" ? data.priorityHint : "";
+      state.eventMemory = data.eventMemory || {};
+      state.spawnedItems = data.spawnedItems || {};
+      state.moveCount = Number.isFinite(data.moveCount) ? data.moveCount : 0;
       state.flags = data.flags || state.flags;
       state.log = Array.isArray(data.log) ? data.log : [];
       state.taken = data.taken || {};
@@ -1352,6 +1457,9 @@ function syncMapTabs(){
     state.log = [];
     state.taken = {};
     state.priorityHint = "";
+    state.eventMemory = {};
+    state.spawnedItems = {};
+    state.moveCount = 0;
     renderAll();
 
     api.say("system",
