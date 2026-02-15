@@ -183,6 +183,14 @@ body{
   font-size: 13px;
 }
 .help__list{ margin:0; padding-left:18px; font-size: 13px; line-height: 1.45; }
+
+.rel{ display:flex; flex-direction:column; gap:8px; }
+.rel__row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13px; }
+.rel__name{ color: rgba(229,231,235,.95); }
+.rel__meter{ display:flex; align-items:center; gap:7px; min-width: 108px; justify-content:flex-end; }
+.rel__bar{ width: 58px; height: 6px; border-radius: 999px; background: rgba(148,163,184,.25); overflow:hidden; }
+.rel__fill{ height:100%; border-radius:999px; background: linear-gradient(90deg, rgba(251,113,133,.9), rgba(250,204,21,.9), rgba(74,222,128,.9)); }
+.rel__value{ color: var(--muted); font-size:12px; font-family: var(--mono); }
 .help code{
   font-family: var(--mono);
   font-size: 12px;
