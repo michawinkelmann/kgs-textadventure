@@ -1,14 +1,15 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#0b1220"/>
-      <stop offset="1" stop-color="#111827"/>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
     </linearGradient>
   </defs>
-  <rect width="1200" height="800" fill="url(#g)"/>
-  <rect x="120" y="180" width="960" height="440" rx="28" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.12)"/>
-  <path d="M220 520 L980 280" stroke="rgba(59,130,246,0.35)" stroke-width="18"/>
-  <path d="M220 280 L980 520" stroke="rgba(34,197,94,0.20)" stroke-width="18"/>
-  <text x="160" y="250" fill="rgba(229,231,235,0.9)" font-size="44" font-family="system-ui" font-weight="700">Brücke</text>
-  <text x="160" y="300" fill="rgba(148,163,184,0.9)" font-size="22" font-family="system-ui">Trakt 3 ↔ Trakt 2</text>
+  <rect width="1400" height="900" fill="url(#sky)"/>
+  <path d="M180 760 L1220 760 L1110 420 L290 420 Z" fill="#1f2937" stroke="#93c5fd" stroke-opacity=".55"/>
+  <line x1="360" y1="430" x2="500" y2="750" stroke="#cbd5e1" stroke-width="8"/>
+  <line x1="1040" y1="430" x2="900" y2="750" stroke="#cbd5e1" stroke-width="8"/>
+  <line x1="700" y1="420" x2="700" y2="760" stroke="#e2e8f0" stroke-width="10" stroke-opacity=".5"/>
+  <text x="190" y="210" fill="#eff6ff" font-size="52" font-family="system-ui" font-weight="800">Baustellen‑Brücke</text>
+  <text x="192" y="256" fill="#bfdbfe" font-size="24" font-family="system-ui">Verbindet Trakt 3 mit dem Stützpunkt</text>
 </svg>
