@@ -27,6 +27,7 @@
   const state = {
     locationId: WORLD?.start?.locationId || "pausenhalle",
     inventory: [...(WORLD?.start?.inventory || [])],
+    itemState: { ...(WORLD?.start?.itemState || {}) },
     relationships: { ...(WORLD?.start?.relationships || {}) },
     knownRelationships: { ...(WORLD?.start?.knownRelationships || {}) },
     flags: { ...(WORLD?.start?.flags || {}) },
@@ -72,8 +73,24 @@
     setFlag(key, val) { state.flags[key] = val; saveAuto(); renderHelp(); },
     getFlag(key) { return !!state.flags[key]; },
     hasItem(itemId) { return state.inventory.includes(itemId); },
+    getItemState(itemId) {
+      const defaults = WORLD?.items?.[itemId]?.itemStateDefaults || {};
+      const current = state.itemState[itemId] || {};
+      return { ...defaults, ...current };
+    },
+    setItemState(itemId, patch) {
+      if (!itemId || !patch || typeof patch !== "object") return;
+      const merged = { ...api.getItemState(itemId), ...patch };
+      state.itemState[itemId] = merged;
+      saveAuto();
+      renderAll();
+    },
     giveItem(itemId) {
       if (!state.inventory.includes(itemId)) state.inventory.push(itemId);
+      if (!state.itemState[itemId]) {
+        const defaults = WORLD?.items?.[itemId]?.itemStateDefaults || {};
+        if (Object.keys(defaults).length) state.itemState[itemId] = { ...defaults };
+      }
       saveAuto();
       renderAll();
     },
@@ -143,6 +160,8 @@
       ["rede", "rede"], ["sprich", "rede"], ["talk", "rede"],
       ["nimm", "nimm"], ["nehm", "nimm"], ["nehme", "nimm"], ["take", "nimm"],
       ["gib", "gib"], ["gebe", "gib"], ["give", "gib"],
+      ["kombiniere", "kombiniere"], ["kombinier", "kombiniere"], ["combine", "kombiniere"],
+      ["nutze", "nutze"], ["benutze", "nutze"], ["use", "nutze"],
       ["inventar", "inventar"], ["inv", "inventar"],
       ["quests", "quests"], ["quest", "quests"],
       ["klar", "klar"], ["clear", "klar"],
@@ -426,8 +445,31 @@
       api.say("system", "Dein Inventar ist leer.");
       return;
     }
-    const lines = state.inventory.map(id => `- ${WORLD.items[id]?.name || id}`);
+    const lines = state.inventory.map(id => `- ${getInventoryLabel(id)}`);
     api.say("system", `**Inventar:**\n${lines.join("\n")}`);
+  }
+
+
+
+  function getInventoryLabel(itemId){
+    const item = WORLD.items[itemId] || {};
+    const baseName = item?.name || itemId;
+    const meta = api.getItemState(itemId);
+    const labels = [];
+
+    for (const [key, value] of Object.entries(meta)){
+      const stateLabels = item?.stateLabels?.[key] || {};
+      const resolved = stateLabels[value];
+      if (resolved) {
+        labels.push(resolved);
+      } else if (value === true) {
+        labels.push(key);
+      } else if (value !== false && value !== null && value !== undefined && value !== "") {
+        labels.push(String(value));
+      }
+    }
+
+    return labels.length ? `${baseName} (${labels.join("/")})` : baseName;
   }
 
   function help(){
@@ -440,6 +482,8 @@
 - \`nimm <item>\`
 - \`gib <item> <name>\`
 - \`gib <name> <item>\`
+- \`kombiniere <item> mit <item>\`
+- \`nutze <item>\` / \`nutze <item> auf <ziel>\`
 - \`inventar\`
 - \`quests\`
 
@@ -674,6 +718,11 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
 
     // Quest-specific handovers
     if (npcId === "sauer" && inv.id === "usb_c_kabel" && state.flags.q_ipad_started && !state.flags.q_ipad_done){
+      const cableState = api.getItemState("usb_c_kabel");
+      if (cableState.zustand !== "repariert"){
+        api.say("system", "**Thomas Sauer** schaut auf das Kabel: \"Das ist noch zu wacklig. Versuch `kombiniere usb_c_kabel mit klebeband`.\"");
+        return;
+      }
       api.removeItem(inv.id);
       state.flags.q_ipad_done = true;
       if (!api.hasItem("it_pass")) api.giveItem("it_pass");
@@ -698,12 +747,13 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
     }
 
     if (npcId === "stunkel" && inv.id === "stundenplan" && state.flags.q_plan_started && !state.flags.q_plan_done){
+      const planState = api.getItemState("stundenplan");
       api.removeItem(inv.id);
       state.flags.q_plan_done = true;
       if (!api.hasItem("hallpass")) api.giveItem("hallpass");
       api.say("system",
         "**Jan Stünkel** nimmt den Ausdruck.\n" +
-        "✅ Quest abgeschlossen: **Stundenplan‑Chaos**\n" +
+        `✅ Quest abgeschlossen: **Stundenplan‑Chaos**${planState.zustand === "markiert" ? " (sauber markiert)" : ""}\n` +
         "Du bekommst: **Flur‑Pass**."
       );
       suggestNextStep(beforeProgress);
@@ -786,6 +836,119 @@ Tipp: Nutze die Vorschläge im Kontext‑Kasten rechts.`);
       return;
     }
     api.say("system", "Die Übergabe hat gerade keinen Effekt (oder ist nicht nötig).");
+  }
+
+
+
+  function findCombineEffect(itemId, otherId){
+    const item = WORLD.items[itemId] || {};
+    const effects = Array.isArray(item.useEffects) ? item.useEffects : [];
+
+    for (const effect of effects){
+      if (effect?.type !== "combine") continue;
+      const withItems = Array.isArray(effect.with) ? effect.with : [effect.with];
+      if (withItems.filter(Boolean).includes(otherId)) return { source: itemId, target: otherId, effect };
+    }
+
+    const combinableWith = Array.isArray(item.combinableWith) ? item.combinableWith : [];
+    if (combinableWith.includes(otherId)) {
+      return {
+        source: itemId,
+        target: otherId,
+        effect: {
+          type: "combine",
+          resultItem: item.resultItem || itemId,
+          text: "Die Kombination klappt."
+        }
+      };
+    }
+
+    return null;
+  }
+
+  function applyCombineEffect(combine){
+    if (!combine?.effect) return false;
+    const { source, target, effect } = combine;
+    const resultItem = effect.resultItem || source;
+    const consume = Array.isArray(effect.consume) ? effect.consume : [];
+
+    for (const itemId of consume){
+      if (itemId !== resultItem && api.hasItem(itemId)) api.removeItem(itemId);
+    }
+
+    if (!api.hasItem(resultItem)) api.giveItem(resultItem);
+    if (effect.setState && typeof effect.setState === "object") api.setItemState(resultItem, effect.setState);
+
+    const text = effect.text || `Du kombinierst **${WORLD.items[source]?.name || source}** mit **${WORLD.items[target]?.name || target}**.`;
+    api.say("system", text);
+    return true;
+  }
+
+  function combineItems(rest){
+    const raw = (rest || "").trim();
+    if (!raw){
+      api.say("system", "Wie genau? Beispiel: `kombiniere usb_c_kabel mit klebeband`.");
+      return;
+    }
+
+    const parts = raw.split(/\s+mit\s+|\s+und\s+/i).map(s => s.trim()).filter(Boolean);
+    if (parts.length < 2){
+      api.say("system", "Bitte nenne zwei Items. Beispiel: `kombiniere stundenplan mit flur_notiz`.");
+      return;
+    }
+
+    const left = getInvItemByQuery(parts[0]);
+    const right = getInvItemByQuery(parts[1]);
+    if (!left || !right){
+      api.say("system", "Beide Items müssen in deinem Inventar sein.");
+      return;
+    }
+    if (left.id === right.id){
+      api.say("system", "Zwei verschiedene Items bitte.");
+      return;
+    }
+
+    const recipe = findCombineEffect(left.id, right.id) || findCombineEffect(right.id, left.id);
+    if (!recipe || !applyCombineEffect(recipe)) api.say("system", "Diese Kombination ergibt hier keinen sinnvollen Effekt.");
+  }
+
+  function useItem(rest){
+    const raw = (rest || "").trim();
+    if (!raw){
+      api.say("system", "Was möchtest du nutzen? Beispiel: `nutze stundenplan auf drucker`.");
+      return;
+    }
+
+    const m = raw.match(/^(.+?)\s+auf\s+(.+)$/i);
+    if (!m){
+      const inv = getInvItemByQuery(raw);
+      if (!inv) {
+        api.say("system", "Dieses Item ist nicht in deinem Inventar.");
+        return;
+      }
+      api.say("system", `Du hältst **${getInventoryLabel(inv.id)}** bereit. Mit Ziel klappt es oft besser: \`nutze ${norm(inv.item.name)} auf <ziel>\`.`);
+      return;
+    }
+
+    const inv = getInvItemByQuery(m[1]);
+    if (!inv){
+      api.say("system", "Dieses Item ist nicht in deinem Inventar.");
+      return;
+    }
+
+    const targetNorm = norm(m[2]);
+    const itemEffects = Array.isArray(inv.item.useEffects) ? inv.item.useEffects : [];
+    const effect = itemEffects.find(fx => fx?.type === "use" && (Array.isArray(fx.target) ? fx.target : [fx.target]).map(norm).includes(targetNorm));
+    if (!effect){
+      api.say("system", "Das bringt hier gerade keinen besonderen Effekt.");
+      return;
+    }
+
+    if (effect.setState && typeof effect.setState === "object") api.setItemState(inv.id, effect.setState);
+    if (effect.setItemState && typeof effect.setItemState === "object" && effect.setItemState.itemId && effect.setItemState.patch){
+      api.setItemState(effect.setItemState.itemId, effect.setItemState.patch);
+    }
+    if (effect.say) api.say("system", effect.say);
   }
 
   function answerLegacy(rest){
@@ -1586,6 +1749,7 @@ function syncMapTabs(){
         locationId: state.locationId,
         
         mapMode: state.mapMode,inventory: state.inventory,
+        itemState: state.itemState,
         relationships: state.relationships,
         knownRelationships: state.knownRelationships,
         priorityHint: state.priorityHint,
@@ -1616,6 +1780,11 @@ function syncMapTabs(){
       state.locationId = data.locationId || state.locationId;
       
       state.mapMode = (data.mapMode === "all" ? "all" : "near");state.inventory = Array.isArray(data.inventory) ? data.inventory : state.inventory;
+      state.itemState = data.itemState || {};
+      for (const itemId of state.inventory){
+        const defaults = WORLD?.items?.[itemId]?.itemStateDefaults || {};
+        state.itemState[itemId] = { ...defaults, ...(state.itemState[itemId] || {}) };
+      }
       state.relationships = data.relationships || state.relationships;
       state.knownRelationships = data.knownRelationships || state.knownRelationships;
       state.priorityHint = typeof data.priorityHint === "string" ? data.priorityHint : "";
@@ -1637,6 +1806,7 @@ function syncMapTabs(){
     localStorage.removeItem(STORAGE_KEY);
     state.locationId = WORLD.start.locationId;
     state.inventory = [...WORLD.start.inventory];
+    state.itemState = { ...(WORLD.start.itemState || {}) };
     state.relationships = { ...(WORLD.start.relationships || {}) };
     state.knownRelationships = { ...(WORLD.start.knownRelationships || {}) };
     state.flags = { ...(WORLD.start.flags || {}) };
@@ -1676,6 +1846,8 @@ function syncMapTabs(){
       case "rede": talkTo(cmd.rest); break;
       case "nimm": takeItem(cmd.rest); break;
       case "gib": giveItem(cmd.rest); break;
+      case "kombiniere": combineItems(cmd.rest); break;
+      case "nutze": useItem(cmd.rest); break;
       case "inventar": describeInventory(); break;
       case "quests": showQuests(); break;
       case "klar": clearChat(); break;

@@ -360,8 +360,21 @@ window.WORLD = {
     usb_c_kabel: {
       name: "USB‑C‑Kabel",
       aliases: ["usb", "usb c", "usb-c", "kabel"],
-      description: "Ein USB‑C‑Kabel. Gerade noch rechtzeitig.",
-      takeable: true
+      description: "Ein USB‑C‑Kabel. Mit etwas Pflege wird es wieder zuverlässig.",
+      takeable: true,
+      itemStateDefaults: { zustand: "defekt" },
+      stateLabels: { zustand: { defekt: "defekt", repariert: "repariert" } },
+      combinableWith: ["klebeband"],
+      resultItem: "usb_c_kabel",
+      useEffects: [
+        {
+          type: "combine",
+          with: ["klebeband"],
+          resultItem: "usb_c_kabel",
+          setState: { zustand: "repariert" },
+          text: "Du fixierst die wacklige Stelle am **USB‑C‑Kabel** mit Klebeband. Es wirkt wieder stabil."
+        }
+      ]
     },
     it_pass: {
       name: "IT‑Pass",
@@ -378,8 +391,28 @@ window.WORLD = {
     stundenplan: {
       name: "Stundenplan (Ausdruck)",
       aliases: ["stundenplan", "plan", "ausdruck"],
-      description: "Ein frischer Ausdruck. Riecht nach Drucker.",
-      takeable: true
+      description: "Ein frischer Ausdruck. Mit Markierungen wird er deutlich übersichtlicher.",
+      takeable: true,
+      itemStateDefaults: { zustand: "roh" },
+      stateLabels: { zustand: { roh: "unmarkiert", markiert: "markiert" } },
+      combinableWith: ["flur_notiz"],
+      resultItem: "stundenplan",
+      useEffects: [
+        {
+          type: "combine",
+          with: ["flur_notiz"],
+          resultItem: "stundenplan",
+          consume: ["flur_notiz"],
+          setState: { zustand: "markiert" },
+          text: "Du überträgst die Hinweise vom Notizzettel auf den Stundenplan. Jetzt ist der Plan sauber **markiert**."
+        },
+        {
+          type: "use",
+          target: ["drucker", "printer"],
+          setState: { zustand: "markiert" },
+          say: "Du legst den Stundenplan am Drucker an und ergänzt klare Markierungen für den Laufweg."
+        }
+      ]
     },
     hallpass: {
       name: "Flur‑Pass",
@@ -437,7 +470,15 @@ window.WORLD = {
       name: "Klebeband",
       aliases: ["tape", "klebeband", "band"],
       description: "Gutes Klebeband. Hält Plakate UND dein Selbstvertrauen zusammen.",
-      takeable: true
+      takeable: true,
+      useEffects: [
+        {
+          type: "use",
+          target: ["usb_c_kabel", "usb kabel", "kabel"],
+          setItemState: { itemId: "usb_c_kabel", patch: { zustand: "repariert" } },
+          say: "Du stabilisierst das USB‑C‑Kabel mit einem Streifen Klebeband."
+        }
+      ]
     },
     konfliktkarten: {
       name: "Konfliktkarten",
