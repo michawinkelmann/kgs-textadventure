@@ -2,6 +2,15 @@
 // Hinweis: Diese Datei hängt absichtlich am globalen `window.WORLD` (kein ES-Module),
 // damit das Spiel auch bei file:// (direkt aus dem Explorer) funktioniert.
 
+function talkCycle(state, key, lines) {
+  if (!Array.isArray(lines) || lines.length === 0) return "";
+  const flagKey = `talk_cycle_${key}`;
+  const idx = Number.isInteger(state.flags[flagKey]) ? state.flags[flagKey] : 0;
+  const line = lines[idx % lines.length];
+  state.flags[flagKey] = (idx + 1) % lines.length;
+  return line;
+}
+
 window.WORLD = {
   meta: {
     title: "KGS Text-Adventure",
@@ -386,14 +395,48 @@ window.WORLD = {
       aliases: ["pietsch", "frau pietsch", "anja"],
       description: "Beschäftigt, aber freundlich. Wenn es um Mensa/Organisation geht, weiß sie Bescheid.",
       onTalk: (state, api) => {
-        state.flags.q_mensa_started = true;
+        if (state.flags.q_mensa_done) {
+          api.say("system",
+            "**Anja Pietsch**\n" +
+            talkCycle(state, "pietsch_done", [
+              "Mensa läuft? Perfekt. Dann ist heute ein Chaos weniger.",
+              "Schön, dass das mit dem Chip geklappt hat. Guten Hunger!"
+            ])
+          );
+          return;
+        }
+
+        if (!state.flags.q_mensa_started) {
+          state.flags.q_mensa_started = true;
+          api.say("system",
+            "**Anja Pietsch**\n" +
+            "Gut, dass du da bist. Wir klären zuerst dein Mensa‑Thema – dann läuft der Rest entspannter."
+          );
+          return;
+        }
 
         // Hauptquest-Checkliste
-        if (state.flags.q_finale_started && !api.hasItem("checkliste")){
+        if (state.flags.q_finale_started && !api.hasItem("checkliste")) {
           api.giveItem("checkliste");
           api.say("system",
             "**Anja Pietsch**\n" +
             "Ah, Team Aula? Hier ist die **Technik‑Checkliste**. Denk an: Adapter, Batterien, Programmflyer… und WLAN."
+          );
+          return;
+        }
+
+        if (api.hasItem("checkliste") && !state.flags.q_finale_done) {
+          api.say("system",
+            "**Anja Pietsch**\n" +
+            "Die Checkliste hast du schon – stark. Häkchen helfen heute wirklich."
+          );
+          return;
+        }
+
+        if (state.flags.saw_codeword_mediothek && !api.hasItem("baustellenpass")) {
+          api.say("system",
+            "**Anja Pietsch**\n" +
+            "Codewort sitzt? Super. Jetzt noch `antworte mediothek`, dann bekommst du den Baustellenpass."
           );
           return;
         }
@@ -411,14 +454,18 @@ window.WORLD = {
           }
           api.say("system",
             "**Anja Pietsch**\n" +
-            "Mit Baustellenpass kommst du zur Fundkiste. Viel Erfolg!"
+            talkCycle(state, "pietsch_progress", [
+              "Mit Baustellenpass kommst du zur Fundkiste. Viel Erfolg!",
+              "Fundkiste beim Hausmeister‑Stützpunkt – dort solltest du den Chip finden.",
+              "Du bist nah dran: Pass ist da, jetzt fehlt nur noch dein Chip."
+            ])
           );
           return;
         }
 
         api.say("system",
           "**Anja Pietsch**\n" +
-          "Wenn dein Chip da ist, bist du fast mensa‑ready. Viel Spaß!"
+          "Chip gefunden – perfekt. Kurz vor Abschluss: Geh in die Mensa und untersuche die Ausgabe."
         );
       }
     },
@@ -429,12 +476,22 @@ window.WORLD = {
       aliases: ["sauer", "herr sauer", "thomas"],
       description: "Technik‑Ecke, Aushänge, Kabel… er wirkt wie jemand, der Probleme lösungsorientiert anguckt.",
       onTalk: (state, api) => {
-        state.flags.q_ipad_started = true;
+        if (!state.flags.q_ipad_started) {
+          state.flags.q_ipad_started = true;
+          api.say("system",
+            "**Thomas Sauer**\n" +
+            "Mein iPad‑Koffer ist tot, weil ein USB‑C‑Kabel fehlt. Kannst du kurz retten?"
+          );
+          return;
+        }
 
         if (state.flags.q_ipad_done) {
           api.say("system",
             "**Thomas Sauer**\n" +
-            "Top, Kabelproblem gelöst. Wenn du was drucken musst: das IT‑Labor ist jetzt für dich ok."
+            talkCycle(state, "sauer_done", [
+              "Top, Kabelproblem gelöst. Wenn du was drucken musst: das IT‑Labor ist jetzt für dich ok.",
+              "Danke nochmal. Seit dem Kabel läuft die Technik wieder deutlich friedlicher."
+            ])
           );
           return;
         }
@@ -447,10 +504,21 @@ window.WORLD = {
           return;
         }
 
+        if (api.hasItem("schrankkarte")) {
+          api.say("system",
+            "**Thomas Sauer**\n" +
+            "Sehr gut, Schrankkarte ist da. Jetzt fehlt nur noch das Kabel aus dem Lehrerzimmer."
+          );
+          return;
+        }
+
         api.say("system",
           "**Thomas Sauer**\n" +
-          "Mein iPad‑Koffer ist tot, weil ein USB‑C‑Kabel fehlt.\n" +
-          "Frag mal im **Sekretariat 2** nach einer Schrankkarte."
+          talkCycle(state, "sauer_progress", [
+            "Frag mal im **Sekretariat 2** nach einer Schrankkarte.",
+            "Ohne Schrankkarte kommen wir nicht ans Kabel im Lehrerzimmer.",
+            "Kleiner Reminder: Sekretariat 2 → Schrankkarte, dann Lehrerzimmer."
+          ])
         );
       }
     },
@@ -541,7 +609,7 @@ window.WORLD = {
       aliases: ["ommen", "herr ommen", "tjark"],
       description: "Ruhig, organisiert – Schulleitungs‑Energie.",
       onTalk: (state, api) => {
-        if (!state.flags.q_finale_started){
+        if (!state.flags.q_finale_started) {
           state.flags.q_finale_started = true;
           api.say("system",
             "**Tjark Ommen**\n" +
@@ -553,7 +621,7 @@ window.WORLD = {
           return;
         }
 
-        if (state.flags.q_finale_done){
+        if (state.flags.q_finale_done) {
           api.say("system",
             "**Tjark Ommen**\n" +
             "Stark. Das Finale steht. Teamwork in Reinform."
@@ -561,9 +629,32 @@ window.WORLD = {
           return;
         }
 
+        const finaleParts = ["checkliste", "hdmi_adapter", "batterien", "programmflyer", "wifi_code"];
+        const missing = finaleParts.filter(itemId => !api.hasItem(itemId));
+
+        if (missing.length === 0 && state.flags.server_ok) {
+          api.say("system",
+            "**Tjark Ommen**\n" +
+            "Perfekt vorbereitet – jetzt fehlt nur noch die Bühne in der Aula. Du bist kurz vor dem Abschluss."
+          );
+          return;
+        }
+
+        if (api.hasItem("wifi_code") && !state.flags.server_ok) {
+          api.say("system",
+            "**Tjark Ommen**\n" +
+            "WLAN‑Code ist da – stark. Nächster Schritt: Serverraum prüfen und das Rack untersuchen."
+          );
+          return;
+        }
+
         api.say("system",
           "**Tjark Ommen**\n" +
-          "Wie läuft’s? Checkliste, Adapter, Batterien, Programmflyer und WLAN‑Code – dann Serverraum – dann Bühne."
+          talkCycle(state, "ommen_progress", [
+            "Wie läuft’s? Checkliste, Adapter, Batterien, Programmflyer und WLAN‑Code – dann Serverraum – dann Bühne.",
+            `Zwischenstand: Es fehlen noch ${missing.length} Baustein(e) fürs Finale.`,
+            "Du hältst das Team gerade zusammen. Wenn alles da ist, geht’s direkt in die Aula."
+          ])
         );
       }
     },
@@ -574,20 +665,49 @@ window.WORLD = {
       aliases: ["seiberlich", "mascha", "frau seiberlich"],
       description: "Stundenpläne, Organisation, Lehrkräfteeinsatz – sie wirkt immer einen Schritt voraus.",
       onTalk: (state, api) => {
-        state.flags.q_plan_started = true;
+        if (!state.flags.q_plan_started) {
+          state.flags.q_plan_started = true;
+          api.say("system",
+            "**Mascha Seiberlich‑Ehrhardt**\n" +
+            "Willkommen im Stundenplan‑Chaos. Wir brauchen schnell einen frischen Ausdruck aus dem IT‑Labor."
+          );
+          return;
+        }
 
         if (state.flags.q_plan_done) {
           api.say("system",
             "**Mascha Seiberlich‑Ehrhardt**\n" +
-            "Super, Planproblem gelöst. Danke!"
+            talkCycle(state, "seiberlich_done", [
+              "Super, Planproblem gelöst. Danke!",
+              "Alles wieder im Takt – danke für die schnelle Hilfe."
+            ])
+          );
+          return;
+        }
+
+        if (api.hasItem("stundenplan")) {
+          api.say("system",
+            "**Mascha Seiberlich‑Ehrhardt**\n" +
+            "Sehr gut, der Ausdruck ist da. Jan Stünkel wartet auf den Plan (`gib stundenplan stunkel`)."
+          );
+          return;
+        }
+
+        if (api.hasItem("it_pass")) {
+          api.say("system",
+            "**Mascha Seiberlich‑Ehrhardt**\n" +
+            "IT‑Pass hast du bereits. Dann fehlt nur noch der Druck am Drucker."
           );
           return;
         }
 
         api.say("system",
           "**Mascha Seiberlich‑Ehrhardt**\n" +
-          "Wir brauchen dringend einen Ausdruck vom aktuellen Stundenplan.\n" +
-          "Geh ins IT‑Labor und untersuche den Drucker."
+          talkCycle(state, "seiberlich_progress", [
+            "Wir brauchen dringend einen Ausdruck vom aktuellen Stundenplan. Geh ins IT‑Labor und untersuche den Drucker.",
+            "Sobald du den Ausdruck hast, direkt zu Jan Stünkel damit.",
+            "Der Plan ist unser Flaschenhals – du bist knapp vor der Lösung."
+          ])
         );
       }
     },
@@ -598,12 +718,22 @@ window.WORLD = {
       aliases: ["engel", "maren", "frau engel"],
       description: "Plant, koordiniert, behält die Ruhe. Sogar wenn überall Papier ist.",
       onTalk: (state, api) => {
-        state.flags.q_presse_started = true;
-
-        if (state.flags.q_presse_done){
+        if (!state.flags.q_presse_started) {
+          state.flags.q_presse_started = true;
           api.say("system",
             "**Maren Engel**\n" +
-            "Danke für den Bericht! Wenn du noch helfen willst: Team Aula braucht heute viele Hände."
+            "Hi! Ich brauche einen kurzen Baustellen‑Mini‑Bericht für die Presse‑AG."
+          );
+          return;
+        }
+
+        if (state.flags.q_presse_done) {
+          api.say("system",
+            "**Maren Engel**\n" +
+            talkCycle(state, "engel_done", [
+              "Danke für den Bericht! Wenn du noch helfen willst: Team Aula braucht heute viele Hände.",
+              "Presse‑AG ist versorgt – richtig gut. Danke dir!"
+            ])
           );
           return;
         }
@@ -618,8 +748,11 @@ window.WORLD = {
 
         api.say("system",
           "**Maren Engel**\n" +
-          "Ich brauche einen Mini‑Bericht für die Presse‑AG.\n" +
-          "Schau im Trakt 3 nach dem Baustellen‑Aushang."
+          talkCycle(state, "engel_progress", [
+            "Schau im Trakt 3 nach dem Baustellen‑Aushang.",
+            "Mir reicht eine kurze Notiz – Hauptsache aktuell und verständlich.",
+            "Wenn du die Notiz schon hast, gib sie mir direkt."
+          ])
         );
       }
     },
@@ -630,17 +763,32 @@ window.WORLD = {
       aliases: ["stunkel", "stünkel", "jan"],
       description: "Schnell im Kopf, freundlich im Ton – aber er mag klare Unterlagen.",
       onTalk: (state, api) => {
-        if (state.flags.q_plan_done){
-          api.say("system", "**Jan Stünkel**\nAlles im grünen Bereich. Danke!");
+        if (state.flags.q_plan_done) {
+          api.say("system", "**Jan Stünkel**\n" + talkCycle(state, "stunkel_done", [
+            "Alles im grünen Bereich. Danke!",
+            "Der Plan hängt, die Kurse laufen. Sauber erledigt."
+          ]));
           return;
         }
 
-        if (api.hasItem("stundenplan")){
+        if (!state.flags.q_plan_started) {
+          api.say("system",
+            "**Jan Stünkel**\n" +
+            "Wenn der Stundenplan fehlt, sprich zuerst mit Frau Seiberlich in der Schulleitung."
+          );
+          return;
+        }
+
+        if (api.hasItem("stundenplan")) {
           api.say("system", "**Jan Stünkel**\nGib mir den Plan: `gib stundenplan stunkel`.");
           return;
         }
 
-        api.say("system", "**Jan Stünkel**\nWenn du einen Ausdruck vom Stundenplan hast, bring ihn rüber.");
+        api.say("system", "**Jan Stünkel**\n" + talkCycle(state, "stunkel_progress", [
+          "Wenn du einen Ausdruck vom Stundenplan hast, bring ihn rüber.",
+          "Ohne Ausdruck kann ich nicht freigeben – Drucker im IT‑Labor ist der Schlüssel.",
+          "Kurzer Statuscheck: Plan unterwegs?"
+        ]));
       }
     },
 
@@ -761,10 +909,20 @@ window.WORLD = {
       aliases: ["semrau", "ole"],
       description: "Digitalisierung, QR‑Codes, iPad‑Ordnung. Und trotzdem nett.",
       onTalk: (state, api) => {
-        state.flags.q_qr_started = true;
+        if (!state.flags.q_qr_started) {
+          state.flags.q_qr_started = true;
+          api.say("system",
+            "**Ole Semrau**\n" +
+            "QR‑Rallye! Drei Spots scannen, dann bekommst du den WLAN‑Code."
+          );
+          return;
+        }
 
-        if (api.hasItem("wifi_code")){
-          api.say("system", "**Ole Semrau**\nWLAN‑Code hast du ja. Bleib fair: nicht weitergeben 😉");
+        if (api.hasItem("wifi_code")) {
+          api.say("system", "**Ole Semrau**\n" + talkCycle(state, "semrau_done", [
+            "WLAN‑Code hast du ja. Bleib fair: nicht weitergeben 😉",
+            "Code ist raus, Mission erfüllt. Viel Erfolg bei der Aula‑Technik!"
+          ]));
           return;
         }
 
@@ -772,7 +930,7 @@ window.WORLD = {
         const b = !!state.flags.qr_spot2;
         const c = !!state.flags.qr_spot3;
 
-        if (a && b && c){
+        if (a && b && c) {
           api.giveItem("wifi_code");
           api.say("system",
             "**Ole Semrau**\n" +
@@ -781,13 +939,30 @@ window.WORLD = {
           return;
         }
 
+        const doneCount = [a, b, c].filter(Boolean).length;
+        if (doneCount >= 2) {
+          api.say("system",
+            "**Ole Semrau**\n" +
+            "Fast geschafft – dir fehlt nur noch ein QR‑Spot. Danach gibt's direkt den WLAN‑Code."
+          );
+          return;
+        }
+
+        if (state.flags.q_finale_started && doneCount === 0) {
+          api.say("system",
+            "**Ole Semrau**\n" +
+            "Fürs Aula‑Finale brauchst du den WLAN‑Code. Starte am besten beim Aushang in der Pausenhalle."
+          );
+          return;
+        }
+
         api.say("system",
           "**Ole Semrau**\n" +
-          "QR‑Rallye! Scanne drei Spots:\n" +
-          "1) Pausenhalle‑Aushang\n" +
-          "2) Mensa‑Ausgabe\n" +
-          "3) Sporthalle‑Anzeigetafel\n" +
-          "Dann kommst du wieder."
+          talkCycle(state, "semrau_progress", [
+            "QR‑Rallye! Scanne drei Spots:\n1) Pausenhalle‑Aushang\n2) Mensa‑Ausgabe\n3) Sporthalle‑Anzeigetafel\nDann kommst du wieder.",
+            `Aktueller Stand: ${doneCount}/3 QR‑Spots erledigt.`,
+            "Tipp: Alle Spots liegen auf Hauptwegen – du musst keinen Umweg laufen."
+          ])
         );
       }
     },
