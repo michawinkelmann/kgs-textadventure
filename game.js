@@ -1391,15 +1391,59 @@ function syncMapTabs(){
   function contextPills(cmds){
     const wrap = document.createElement("div");
     wrap.className = "suggest";
+
+    const applySuggestionToInput = (cmdText) => {
+      els.input.value = cmdText;
+      els.input.focus();
+    };
+
+    const executeSuggestion = (cmdText) => {
+      if (!cmdText) return;
+      handleInput(cmdText);
+      els.input.focus();
+    };
+
     for (const c of cmds){
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "pill";
       btn.textContent = c;
-      btn.addEventListener("click", () => {
-        els.input.value = c;
-        els.input.focus();
+
+      let pressTimer = null;
+      let longPressTriggered = false;
+
+      btn.addEventListener("pointerdown", () => {
+        longPressTriggered = false;
+        if (pressTimer) clearTimeout(pressTimer);
+        pressTimer = setTimeout(() => {
+          longPressTriggered = true;
+          applySuggestionToInput(c);
+        }, 450);
       });
+
+      const clearPressTimer = () => {
+        if (pressTimer) clearTimeout(pressTimer);
+        pressTimer = null;
+      };
+
+      btn.addEventListener("pointerup", clearPressTimer);
+      btn.addEventListener("pointerleave", clearPressTimer);
+      btn.addEventListener("pointercancel", clearPressTimer);
+
+      btn.addEventListener("click", (event) => {
+        if (longPressTriggered) {
+          longPressTriggered = false;
+          return;
+        }
+
+        if (event.shiftKey) {
+          applySuggestionToInput(c);
+          return;
+        }
+
+        executeSuggestion(c);
+      });
+
       wrap.appendChild(btn);
     }
     return wrap;
